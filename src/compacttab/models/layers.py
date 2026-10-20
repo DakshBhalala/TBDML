@@ -94,7 +94,7 @@ class BatchEnsembleLinear(nn.Module):
 
 
 class GatedResidualBlock(nn.Module):
-    """Gated Residual Block with BatchEnsemble and SwiGLU activation."""
+    """Gated Residual Block with BatchEnsemble, SwiGLU activation, and LayerScale."""
 
     def __init__(
         self,
@@ -102,6 +102,7 @@ class GatedResidualBlock(nn.Module):
         expansion_factor: float = 2.0,
         num_heads: int = 4,
         dropout: float = 0.1,
+        init_scale: float = 0.1,
     ):
         super().__init__()
         self.hidden_dim = hidden_dim
@@ -112,6 +113,8 @@ class GatedResidualBlock(nn.Module):
         self.linear_up = BatchEnsembleLinear(hidden_dim, intermediate_dim * 2, num_heads=num_heads)
         self.linear_down = BatchEnsembleLinear(intermediate_dim, hidden_dim, num_heads=num_heads)
         self.dropout = nn.Dropout(dropout)
+        # LayerScale parameter initialized for stable gradient dynamics
+        self.gamma = nn.Parameter(torch.full((hidden_dim,), init_scale))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
@@ -139,4 +142,32 @@ class GatedResidualBlock(nn.Module):
         h = self.linear_down(h)
         h = self.dropout(h)
 
-        return residual + h
+        return residual + self.gamma * h
+
+
+class FeatureCrossLayer(nn.Module):
+    """Multiplicative Feature Crossing Layer.
+
+    Explicitly models non-linear polynomial feature interactions:
+    x_{l+1} = x_l + gamma * (x_0 * Linear(RMSNorm(x_l)))
+    """
+
+    def __init__(self, in_features: int, num_heads: int = 4, init_scale: float = 0.05):
+        super().__init__()
+        self.linear = BatchEnsembleLinear(in_features, in_features, num_heads=num_heads)
+        self.norm = RMSNorm(in_features)
+        self.gamma = nn.Parameter(torch.full((in_features,), init_scale))
+
+    def forward(self, x: torch.Tensor, x0: torch.Tensor) -> torch.Tensor:
+        """Forward pass.
+
+        Args:
+            x: Current hidden state tensor (k, batch_size, in_features)
+            x0: Initial projected input tensor (k, batch_size, in_features)
+
+        Returns:
+            Tensor of shape (k, batch_size, in_features)
+        """
+        h = self.norm(x)
+        h_cross = x0 * self.linear(h)
+        return x + self.gamma * h_cross

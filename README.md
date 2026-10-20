@@ -7,7 +7,7 @@
 [![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![PyTorch 2.2+](https://img.shields.io/badge/PyTorch-2.2+-ee4c2c.svg)](https://pytorch.org/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
-[![Tests: 21 passed](https://img.shields.io/badge/Tests-21%20passed-brightgreen.svg)](tests/)
+[![Tests: 22 passed](https://img.shields.io/badge/Tests-22%20passed-brightgreen.svg)](tests/)
 
 </div>
 
@@ -15,15 +15,16 @@
 
 ## Overview
 
-**CompactTab** is an open-source, mathematically grounded deep learning architecture designed specifically for tabular data. It addresses the classical limitations of neural networks on structured tables by unifying:
+**CompactTab** is an open-source, mathematically grounded deep learning and hybrid architecture designed specifically for tabular data. It addresses the classical limitations of neural networks on structured tables by unifying:
 
-1. **Quantile Piecewise-Linear Embeddings (PLE):** Maps scalar continuous numerical features into multi-dimensional embeddings across data-driven quantile cutoffs, eliminating the inductive bias gap between neural networks and decision trees.
-2. **BatchEnsemble Multi-Head Weight Generation:** Creates an ensemble of $K$ distinct submodels via rank-1 weight modulation vectors:
+1. **Periodic Quantile Piecewise-Linear Embeddings (PQ-PLE):** Combines data-driven quantile cutoffs with learnable Fourier/Periodic frequency basis functions ($\cos(2\pi C x), \sin(2\pi C x)$), enabling the neural backbone to resolve both sharp localized step transitions and smooth global manifolds.
+2. **Multiplicative Feature Interaction Crossing:** Explicitly computes polynomial cross-feature conjunctions via $x_{l+1} = x_l + \gamma \cdot (x_0 \odot W(x_l))$, overcoming the classic failure mode of standard MLPs on high-order feature interactions.
+3. **BatchEnsemble Multi-Head Weight Modulation:** Creates an ensemble of $K$ distinct submodels via rank-1 weight modulation vectors:
    $$W_k = W \odot (r_k s_k^\top), \quad r_k \in \mathbb{R}^{d_{\text{out}}}, s_k \in \mathbb{R}^{d_{\text{in}}}$$
    providing full ensemble diversity at almost zero parameter and memory overhead.
-3. **Gated Residual Blocks (GRN):** Stacks Gated Linear Units with Root Mean Square Normalization (RMSNorm) and residual connections to stabilize deep tabular optimization.
-4. **Scikit-Learn Standard API:** Drop-in `CompactTabClassifier` and `CompactTabRegressor` estimators with automated schema inference and leakage-free preprocessing.
-5. **AutoGluon & TabArena Native Plugin:** Direct integration via `TabArenaCompactTabModel(AbstractModel)` for seamless multi-layer stacking, bagging, and benchmark evaluation.
+4. **Tri-Engine Convex Stacking (CompactTab-Hybrid):** Ensembles CompactTab (deep neural) with LightGBM (asymmetric leaf-wise GBDT) and CatBoost (symmetric oblivious trees) using out-of-fold constrained SLSQP optimization over the probability simplex $\Delta^{M-1}$ to guarantee mathematically optimal variance reduction.
+5. **Scikit-Learn Standard API:** Drop-in `CompactTabClassifier`, `CompactTabRegressor`, `CompactTabHybridClassifier`, and `CompactTabHybridRegressor` estimators with automated schema inference, categorical handling, and leakage-free preprocessing.
+6. **AutoGluon & TabArena Native Plugin:** Direct integration via `TabArenaCompactTabModel(AbstractModel)` for seamless multi-layer stacking, bagging, and benchmark evaluation.
 
 ```
 +-----------------------------------------------------------------------------------+
@@ -95,10 +96,10 @@ To verify predictive power, we evaluate CompactTab and CompactTab-Hybrid against
 
 | Model Architecture | Binary Acc (Breast Cancer) | Binary ROC-AUC | Multiclass Acc (Wine, 3-Class) | Multiclass OVR AUC | Regression R2 (Diabetes) | Regression RMSE |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **CompactTab-Hybrid (Ours)** | **0.9720** | 0.9937 | **0.9778** | **1.0000** | 0.4291 | 56.19 |
-| **CompactTab (Ours)** | 0.9580 | **0.9971** | 0.9556 | 0.9993 | **0.4377** | **55.76** |
-| LightGBM / CatBoost | 0.9650 | 0.9916 | 0.9556 | 1.0000 | 0.4284 | 56.22 |
-| RandomForest | 0.9580 | 0.9950 | **1.0000** | 1.0000 | 0.4556 | 54.86 |
+| **CompactTab-Hybrid (Ours)** | **0.9720** | **0.9952** | 0.9556 | **1.0000** | **0.4937** | **52.91** |
+| **CompactTab (Ours)** | 0.9510 | 0.9901 | **0.9778** | **1.0000** | 0.3533 | 59.80 |
+| LightGBM / CatBoost | 0.9650 | 0.9910 | **1.0000** | **1.0000** | 0.4331 | 55.99 |
+| RandomForest | 0.9580 | 0.9950 | **1.0000** | **1.0000** | 0.4556 | 54.86 |
 | Torch-Style MLP | 0.9231 | 0.9451 | 0.9333 | 0.9849 | 0.4015 | 57.53 |
 
 *Reproduce with:* `python scripts/benchmark_comparison.py`

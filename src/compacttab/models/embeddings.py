@@ -6,10 +6,11 @@ import torch.nn as nn
 
 
 class PiecewiseLinearEncoding(nn.Module):
-    """Vectorized Piecewise Linear Encoding (PLE) for continuous features.
+    """Vectorized Piecewise Linear Encoding (PLE) with Periodic Fourier Modulations.
 
     Transforms scalar continuous values into soft piecewise linear representations
-    relative to quantile bin edges fitted on training data.
+    relative to quantile bin edges fitted on training data, augmented with learnable
+    periodic Fourier basis functions for capturing sharp boundaries and high-frequency patterns.
     """
 
     def __init__(
@@ -17,11 +18,15 @@ class PiecewiseLinearEncoding(nn.Module):
         bin_edges: dict[str, np.ndarray],
         num_cols: list[str],
         embed_dim: int = 16,
+        num_freqs: int = 8,
+        use_periodic: bool = True,
     ):
         super().__init__()
         self.num_cols = num_cols
         self.embed_dim = embed_dim
         self.num_features = len(num_cols)
+        self.num_freqs = num_freqs
+        self.use_periodic = use_periodic and (self.num_features > 0)
 
         if self.num_features > 0:
             edge_tensors = [torch.from_numpy(bin_edges[col]).float() for col in num_cols]
@@ -49,11 +54,22 @@ class PiecewiseLinearEncoding(nn.Module):
             # Single 3D tensor parameter for all feature projections: (F, num_bins, embed_dim)
             self.weight = nn.Parameter(torch.empty(self.num_features, num_bins, embed_dim))
             nn.init.kaiming_uniform_(self.weight, a=5**0.5)
+
+            if self.use_periodic:
+                self.frequencies = nn.Parameter(torch.randn(self.num_features, self.num_freqs) * 0.5)
+                self.fourier_weight = nn.Parameter(
+                    torch.randn(self.num_features, 2 * self.num_freqs, embed_dim) * 0.02
+                )
+            else:
+                self.register_parameter("frequencies", None)
+                self.register_parameter("fourier_weight", None)
         else:
             self.num_bins = 0
             self.register_buffer("b_left", torch.empty(0))
             self.register_buffer("span", torch.empty(0))
             self.weight = nn.Parameter(torch.empty(0, 0, embed_dim))
+            self.register_parameter("frequencies", None)
+            self.register_parameter("fourier_weight", None)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
@@ -67,12 +83,19 @@ class PiecewiseLinearEncoding(nn.Module):
         if self.num_features == 0:
             return torch.empty(x.shape[0], 0, self.embed_dim, device=x.device)
 
-        # Vectorized soft binning across all features in a single kernel
+        # 1. Vectorized soft binning across all features in a single kernel
         x_exp = x.unsqueeze(-1)  # (N, F, 1)
         ple_val = torch.clamp((x_exp - self.b_left) / self.span, 0.0, 1.0)  # (N, F, num_bins)
+        out = torch.einsum("nfk,fkd->nfd", ple_val, self.weight)
 
-        # Vectorized einsum projection: (N, F, num_bins) x (F, num_bins, embed_dim) -> (N, F, embed_dim)
-        return torch.einsum("nfk,fkd->nfd", ple_val, self.weight)
+        # 2. Learnable Periodic Fourier Modulation
+        if self.use_periodic and self.frequencies is not None and self.fourier_weight is not None:
+            angles = 2.0 * np.pi * x.unsqueeze(-1) * self.frequencies.unsqueeze(0)
+            fourier_features = torch.cat([torch.cos(angles), torch.sin(angles)], dim=-1)
+            fourier_emb = torch.einsum("nfk,fkd->nfd", fourier_features, self.fourier_weight)
+            out = out + fourier_emb
+
+        return out
 
 
 class CategoricalEmbedding(nn.Module):

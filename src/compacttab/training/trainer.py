@@ -28,6 +28,7 @@ class TabularTrainer:
         patience: int = 10,
         batch_size: int = 128,
         mixup_alpha: float = 0.0,
+        label_smoothing: float = 0.01,
         verbose: bool = False,
     ):
         self.model = model
@@ -38,6 +39,7 @@ class TabularTrainer:
         self.patience = patience
         self.batch_size = batch_size
         self.mixup_alpha = mixup_alpha
+        self.label_smoothing = label_smoothing if schema.is_classification else 0.0
         self.verbose = verbose
 
         # Automatic device assignment
@@ -52,7 +54,7 @@ class TabularTrainer:
         if self.schema.task_type == TaskType.BINARY:
             self.criterion = nn.BCEWithLogitsLoss()
         elif self.schema.task_type == TaskType.MULTICLASS:
-            self.criterion = nn.CrossEntropyLoss()
+            self.criterion = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
         else:
             self.criterion = nn.MSELoss()
 
@@ -61,7 +63,16 @@ class TabularTrainer:
             lr=self.learning_rate,
             weight_decay=self.weight_decay,
         )
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=max_epochs, eta_min=1e-6)
+
+        warmup_epochs = min(3, max(1, max_epochs // 10))
+
+        def lr_lambda(epoch: int) -> float:
+            if epoch < warmup_epochs:
+                return float(epoch + 1) / float(max(1, warmup_epochs))
+            progress = float(epoch - warmup_epochs) / float(max(1, max_epochs - warmup_epochs))
+            return 0.5 * (1.0 + float(np.cos(np.pi * progress)))
+
+        self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lr_lambda)
 
         self.best_val_loss = float("inf")
         self.best_state_dict: dict[str, Any] | None = None
@@ -69,6 +80,11 @@ class TabularTrainer:
 
     def _compute_loss(self, outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """Compute loss supporting both multi-head ensemble tensors and single-head tensors."""
+        if self.schema.task_type == TaskType.BINARY and self.label_smoothing > 0.0:
+            targets_eff = targets.float() * (1.0 - 2.0 * self.label_smoothing) + self.label_smoothing
+        else:
+            targets_eff = targets.float() if self.schema.task_type != TaskType.MULTICLASS else targets.long()
+
         if outputs.dim() == 3:
             # Multi-head ensemble output: (k, B, out_dim)
             num_heads = outputs.size(0)
@@ -76,21 +92,21 @@ class TabularTrainer:
             for m in range(num_heads):
                 head_out = outputs[m]  # (B, out_dim)
                 if self.schema.task_type == TaskType.BINARY:
-                    loss_m = self.criterion(head_out.squeeze(-1), targets.float())
+                    loss_m = self.criterion(head_out.squeeze(-1), targets_eff)
                 elif self.schema.task_type == TaskType.MULTICLASS:
-                    loss_m = self.criterion(head_out, targets.long())
+                    loss_m = self.criterion(head_out, targets_eff)
                 else:
-                    loss_m = self.criterion(head_out.squeeze(-1), targets.float())
+                    loss_m = self.criterion(head_out.squeeze(-1), targets_eff)
                 total_loss = total_loss + loss_m
             return total_loss / num_heads
         else:
             # Single-head output: (B, out_dim)
             if self.schema.task_type == TaskType.BINARY:
-                return self.criterion(outputs.squeeze(-1), targets.float())
+                return self.criterion(outputs.squeeze(-1), targets_eff)
             elif self.schema.task_type == TaskType.MULTICLASS:
-                return self.criterion(outputs, targets.long())
+                return self.criterion(outputs, targets_eff)
             else:
-                return self.criterion(outputs.squeeze(-1), targets.float())
+                return self.criterion(outputs.squeeze(-1), targets_eff)
 
     def fit(
         self,

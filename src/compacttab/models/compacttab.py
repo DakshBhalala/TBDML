@@ -15,7 +15,12 @@ from compacttab.data.dataset import TabularDataset, create_dataloader
 from compacttab.data.preprocessor import TabularPreprocessor
 from compacttab.data.schema import DatasetSchema, TaskType
 from compacttab.models.embeddings import CategoricalEmbedding, PiecewiseLinearEncoding
-from compacttab.models.layers import BatchEnsembleLinear, GatedResidualBlock, RMSNorm
+from compacttab.models.layers import (
+    BatchEnsembleLinear,
+    FeatureCrossLayer,
+    GatedResidualBlock,
+    RMSNorm,
+)
 from compacttab.training.trainer import TabularTrainer
 
 
@@ -145,7 +150,7 @@ class CompactTab(nn.Module):
         # Feature projection to backbone hidden dimension
         self.input_proj = nn.Linear(total_tokens_dim, self.config.hidden_dim)
 
-        # 3. Gated Residual Backbone
+        # 3. Gated Residual Backbone with Feature Crossing
         self.blocks = nn.ModuleList(
             [
                 GatedResidualBlock(
@@ -156,6 +161,10 @@ class CompactTab(nn.Module):
                 )
                 for _ in range(self.config.num_layers)
             ]
+        )
+        self.cross = FeatureCrossLayer(
+            in_features=self.config.hidden_dim,
+            num_heads=self.config.num_heads,
         )
         self.final_norm = RMSNorm(self.config.hidden_dim)
 
@@ -201,14 +210,16 @@ class CompactTab(nn.Module):
             x_in = torch.zeros(num_vals.shape[0], 1, device=num_vals.device)
 
         # Project to hidden_dim
-        h = self.input_proj(x_in)  # (B, hidden_dim)
+        h0 = self.input_proj(x_in)  # (B, hidden_dim)
 
         # Broadcast across k heads
-        h = h.unsqueeze(0).expand(self.num_heads, -1, -1)  # (k, B, hidden_dim)
+        h0_k = h0.unsqueeze(0).expand(self.num_heads, -1, -1)  # (k, B, hidden_dim)
+        h = h0_k
 
-        # Backbone blocks
+        # Backbone blocks with non-linear feature interaction crossing
         for block in self.blocks:
             h = block(h)
+            h = self.cross(h, h0_k)
 
         h = self.final_norm(h)
 
