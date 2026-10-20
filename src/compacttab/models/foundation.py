@@ -108,11 +108,9 @@ class CompactTabFoundation:
 
     def fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> "CompactTabFoundation":
         """Store context set for in-context learning."""
-        if self.schema.is_classification:
-            y_arr = np.asarray(y)
-            self.classes_ = np.unique(y_arr)
-
         self.x_context, self.y_context = self._prepare_table(X, y)
+        if self.schema.is_classification:
+            self.classes_ = np.unique(np.asarray(y))
         return self
 
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
@@ -135,9 +133,17 @@ class CompactTabFoundation:
         probs_tensor = probs_table.numerical
         probs = probs_tensor.cpu().detach().float().numpy()
 
-        # If binary classification and returned 2 columns
+        # If binary classification and returned >2 columns
         if self.schema.task_type == TaskType.BINARY and probs.shape[1] > 2:
             probs = probs[:, :2]
+
+        # Align columns to sorted unique classes:
+        if self.classes_ is not None and len(self.classes_) == probs.shape[1]:
+            if self.y_context is not None and hasattr(self.y_context, "categorical") and hasattr(self.y_context.categorical, "categories"):
+                cats = self.y_context.categorical.categories[0].cpu().numpy()
+                sorted_classes = np.sort(cats)
+                order = [int(np.where(cats == c)[0][0]) for c in sorted_classes]
+                probs = probs[:, order]
 
         # Normalize across class dimension
         row_sums = probs.sum(axis=-1, keepdims=True)
