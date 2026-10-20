@@ -6,10 +6,9 @@ from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.model_selection import train_test_split
 
 from compacttab.integrations.tabarena import AUTOGLUON_AVAILABLE, TabArenaCompactTabModel
-from compacttab.models.foundation import SDM_AVAILABLE
 
 
-@pytest.mark.skipif(not (AUTOGLUON_AVAILABLE and SDM_AVAILABLE), reason="AutoGluon or SDM not installed")
+@pytest.mark.skipif(not AUTOGLUON_AVAILABLE, reason="AutoGluon not installed")
 def test_tabarena_autogluon_binary_classification():
     """Verify TabArenaCompactTabModel behaves as valid AutoGluon model on binary classification."""
     data = load_breast_cancer(as_frame=True)
@@ -23,9 +22,9 @@ def test_tabarena_autogluon_binary_classification():
 
     model = TabArenaCompactTabModel(
         problem_type="binary",
-        target=target_col,
-        foundation_size="small",
-        num_estimators=2,
+        preset="tiny",
+        max_epochs=5,
+        batch_size=64,
     )
 
     model.fit(X=X_train, y=y_train)
@@ -36,10 +35,10 @@ def test_tabarena_autogluon_binary_classification():
     assert np.allclose(probs.sum(axis=1), 1.0, atol=1e-3)
     assert len(preds) == len(X_test)
     accuracy = (preds == y_test.to_numpy()).mean()
-    assert accuracy > 0.90, f"Expected accuracy > 0.90, got {accuracy:.4f}"
+    assert accuracy > 0.85, f"Expected accuracy > 0.85, got {accuracy:.4f}"
 
 
-@pytest.mark.skipif(not (AUTOGLUON_AVAILABLE and SDM_AVAILABLE), reason="AutoGluon or SDM not installed")
+@pytest.mark.skipif(not AUTOGLUON_AVAILABLE, reason="AutoGluon not installed")
 def test_tabarena_autogluon_regression():
     """Verify TabArenaCompactTabModel behaves as valid AutoGluon model on regression."""
     data = load_diabetes(as_frame=True)
@@ -53,9 +52,9 @@ def test_tabarena_autogluon_regression():
 
     model = TabArenaCompactTabModel(
         problem_type="regression",
-        target=target_col,
-        foundation_size="small",
-        num_estimators=2,
+        preset="tiny",
+        max_epochs=5,
+        batch_size=64,
     )
 
     model.fit(X=X_train, y=y_train)

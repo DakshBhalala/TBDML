@@ -1,52 +1,76 @@
 # CompactTab API Reference
 
-This document provides detailed API specifications for the core classes and functions in the `compacttab` library.
+This document provides detailed API specifications for the core estimators, neural architecture, and utilities in the `compacttab` library.
 
 ---
 
-## 1. Foundation Models (`compacttab.models`)
+## 1. High-Level Estimators (`compacttab.models`)
 
-### `CompactTabFoundation`
+### `CompactTabClassifier`
 
-In-context Tabular Foundation Model (TFM) utilizing pretrained Structural Causal Model (SCM) transformer architectures.
+Scikit-Learn compatible classifier using Quantile Piecewise-Linear Embeddings and BatchEnsemble gated residual blocks.
 
 ```python
-from compacttab.models import CompactTabFoundation
+from compacttab import CompactTabClassifier
 
-model = CompactTabFoundation(
-    size: str = "small",
+clf = CompactTabClassifier(
+    preset: str = "small",
+    hidden_dim: int | None = None,
+    num_layers: int | None = None,
+    num_heads: int | None = None,
+    num_bins: int | None = None,
+    embed_dim: int | None = None,
+    dropout: float | None = None,
+    learning_rate: float = 1e-3,
+    weight_decay: float = 1e-4,
+    max_epochs: int = 50,
+    patience: int = 10,
+    batch_size: int = 128,
+    val_fraction: float = 0.15,
     device: str | None = None,
-    num_estimators: int = 4,
     random_state: int | None = 42,
+    verbose: bool = False,
 )
 ```
 
 #### Parameters:
-- `size` (*str*, default=`"small"`): Model scale checkpoint:
-  - `"small"`: ~27.9M parameters, 109 MB weights. Optimal speed-accuracy trade-off targeting ~1803 Elo.
-  - `"medium"`: ~62.3M parameters, 246 MB weights. High accuracy targeting ~1902 Elo.
-  - `"large"`: ~215M parameters, 860 MB weights. Maximum representation capacity targeting ~1962 Elo.
-- `device` (*str* or *None*, default=`None`): Target device (`"cuda"` or `"cpu"`). If `None`, automatically resolves to `"cuda"` if available.
-- `num_estimators` (*int*, default=`4`): Number of ensemble forward passes over context subsamples.
-- `random_state` (*int* or *None*, default=`42`): Seed for reproducible context sampling.
+- `preset` (*str*, default=`"small"`): Predefined architectural scale:
+  - `"tiny"`: ~100k parameters (`hidden_dim=64`, `num_layers=2`, `num_heads=4`, `embed_dim=12`).
+  - `"small"`: ~1M parameters (`hidden_dim=128`, `num_layers=4`, `num_heads=8`, `embed_dim=24`).
+  - `"medium"`: ~10M parameters (`hidden_dim=384`, `num_layers=6`, `num_heads=8`, `embed_dim=32`).
+- `learning_rate` (*float*, default=`1e-3`): Initial AdamW learning rate with cosine annealing schedule.
+- `weight_decay` (*float*, default=`1e-4`): L2 regularization factor.
+- `max_epochs` (*int*, default=`50`): Maximum training iterations.
+- `patience` (*int*, default=`10`): Number of validation check epochs without loss improvement before early stopping.
+- `batch_size` (*int*, default=`128`): Mini-batch training size.
+- `val_fraction` (*float*, default=`0.15`): Fraction of training data held out for early stopping if no explicit validation split is passed.
+- `device` (*str* or *None*, default=`None`): Target device (`"cuda"` or `"cpu"`).
 
 #### Methods:
+- `fit(X, y, X_val=None, y_val=None)`: Fits the preprocessor, initializes weights, and trains the network.
+- `predict_proba(X)`: Computes normalized class probabilities averaged across the $K$ ensemble heads.
+- `predict(X)`: Predicts discrete class labels.
+- `score(X, y)`: Computes mean classification accuracy.
 
-##### `fit(X, y)`
-Conditions the model on the labeled context dataset $\mathcal{D}_{\text{train}} = (X, y)$.
-- **`X`** (*pd.DataFrame* or *np.ndarray*): Feature matrix of shape `(n_samples, n_features)`.
-- **`y`** (*pd.Series* or *np.ndarray*): Target vector of shape `(n_samples,)`.
-- **Returns:** `self`
+---
 
-##### `predict(X)`
-Predicts discrete class labels for classification or continuous values for regression.
-- **`X`** (*pd.DataFrame* or *np.ndarray*): Query feature matrix of shape `(n_query, n_features)`.
-- **Returns:** `np.ndarray` of shape `(n_query,)`.
+### `CompactTabRegressor`
 
-##### `predict_proba(X)`
-Estimates class probability distributions for classification tasks.
-- **`X`** (*pd.DataFrame* or *np.ndarray*): Query feature matrix of shape `(n_query, n_features)`.
-- **Returns:** `np.ndarray` of shape `(n_query, n_classes)` normalized such that row sums equal 1.0.
+Scikit-Learn compatible regressor for continuous target prediction.
+
+```python
+from compacttab import CompactTabRegressor
+
+reg = CompactTabRegressor(
+    preset: str = "small",
+    max_epochs: int = 50,
+    patience: int = 10,
+    batch_size: int = 128,
+)
+```
+
+#### Parameters & Methods:
+Identical signature to `CompactTabClassifier`, with target standardization and MSE loss optimization. `predict(X)` returns continuous 1D predictions on the original scale.
 
 ---
 
@@ -60,78 +84,40 @@ AutoGluon `AbstractModel` drop-in wrapper designed for TabArena benchmark evalua
 from compacttab.integrations.tabarena import TabArenaCompactTabModel
 
 model = TabArenaCompactTabModel(
-    problem_type: str,
-    foundation_size: str = "small",
-    eval_metric: str | None = None,
-    hyperparameters: dict | None = None,
-    **kwargs,
+    name: str = "CompactTab",
+    problem_type: str = "binary",  # "binary", "multiclass", or "regression"
+    preset: str = "small",
+    max_epochs: int = 50,
+    batch_size: int = 128,
 )
 ```
-
-#### Parameters:
-- `problem_type` (*str*): One of `"binary"`, `"multiclass"`, or `"regression"`.
-- `foundation_size` (*str*, default=`"small"`): Foundation model size variant (`"small"`, `"medium"`, `"large"`).
-- `eval_metric` (*str* or *None*, default=`None`): Optimization metric string recognized by AutoGluon (e.g. `"roc_auc"`, `"log_loss"`, `"root_mean_squared_error"`).
-- `hyperparameters` (*dict* or *None*, default=`None`): Hyperparameter dictionary passed to model (e.g. `{"num_estimators": 4}`).
 
 #### AutoGluon Compliance:
 - Fully implements `_fit(X, y, X_val, y_val, time_limit, num_cpus, num_gpus, **kwargs)`.
 - Implements `_predict(X, **kwargs)` and `_predict_proba(X, **kwargs)`.
-- Properly declares `_get_default_auxiliary_params()` to accept continuous, categorical, and object dtypes without destructive truncation.
+- Accepts continuous, categorical, and object dtypes via `_get_default_auxiliary_params()`.
 
 ---
 
-## 3. Fitted Deep Learning Architecture (`compacttab.models.compacttab`)
+## 3. PyTorch Architecture (`compacttab.models.compacttab`)
 
 ### `CompactTab`
 
-Parameter-efficient PyTorch neural network combining Quantile PLE embeddings and BatchEnsemble gated residual blocks.
+Low-level PyTorch neural network module.
 
 ```python
-from compacttab.models.compacttab import CompactTab
+from compacttab.models.compacttab import CompactTab, CompactTabConfig
 
 model = CompactTab(
-    d_in: int,
-    d_out: int,
-    d_hidden: int = 128,
-    n_blocks: int = 4,
-    ensemble_size: int = 4,
-    dropout: float = 0.1,
+    schema: DatasetSchema,
+    bin_edges: dict[str, np.ndarray],
+    cat_cardinalities: dict[str, int],
+    config: CompactTabConfig | None = None,
 )
 ```
 
-#### Parameters:
-- `d_in` (*int*): Total dimensionality of the concatenated input feature embeddings.
-- `d_out` (*int*): Output dimension (1 for binary classification / regression; `C` for multiclass).
-- `d_hidden` (*int*, default=`128`): Width of the intermediate gated residual representations.
-- `n_blocks` (*int*, default=`4`): Number of stacked Gated Residual Blocks.
-- `ensemble_size` (*int*, default=`4`): Number of rank-1 ensemble members in BatchEnsemble layers.
-- `dropout` (*float*, default=`0.1`): Dropout probability applied across intermediate linear transformations.
-
----
-
-## 4. Preprocessing & Leakage Isolation (`compacttab.data.preprocessor`)
-
-### `LeakageFreePreprocessor`
-
-Strictly partitioned tabular preprocessor that calculates all summary statistics, quantile bin boundaries, and imputation values solely on the training fold.
-
-```python
-from compacttab.data.preprocessor import LeakageFreePreprocessor
-
-preprocessor = LeakageFreePreprocessor(
-    n_bins: int = 32,
-    cat_min_freq: int = 5,
-    handle_unknown: str = "ignore",
-)
-```
-
-#### Parameters:
-- `n_bins` (*int*, default=`32`): Number of quantile bins for Piecewise Linear Embedding.
-- `cat_min_freq` (*int*, default=`5`): Minimum occurrences for a categorical level before being collapsed into an Out-of-Vocabulary token.
-- `handle_unknown` (*str*, default=`"ignore"`): Strategy for handling unseen categories at test time.
-
-#### Methods:
-- `fit(X, y=None)`: Derives quantile thresholds and categorical vocabularies exclusively from `X`.
-- `transform(X)`: Applies derived binning and encoding to test/validation splits without updating statistics.
-- `fit_transform(X, y=None)`: Convenience method executing `fit` followed by `transform`.
+#### Core Components:
+- **`PiecewiseLinearEncoding`:** Continuous feature numerical tokenizer.
+- **`CategoricalEmbedding`:** Entity embedding table with OOV handling.
+- **`GatedResidualBlock`:** SwiGLU-inspired gated feed-forward block with RMSNorm.
+- **`BatchEnsembleLinear`:** Multi-head rank-1 modulated linear layer.

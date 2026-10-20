@@ -1,15 +1,16 @@
-"""AutoGluon AbstractModel plugin for TabArena leaderboard integration.
+"""AutoGluon AbstractModel plugin for TabArena benchmark integration.
 
-Complies with official TabArena benchmark submission requirements:
+Complies with official TabArena benchmark model requirements:
 - Subclasses autogluon.core.models.AbstractModel
 - Implements _fit, _predict, _predict_proba
 - Supports binary, multiclass, and regression problem types
-- Integrates SOTA in-context tabular foundation model (Top 5 on Tabular Benchmark)
+- Powered natively by CompactTab (Quantile PLE + BatchEnsemble Gated Residuals)
 """
 
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -26,27 +27,34 @@ except ImportError:
     REGRESSION = "regression"
     AUTOGLUON_AVAILABLE = False
 
-from compacttab.data.schema import DatasetSchema, TaskType
-from compacttab.models.foundation import CompactTabFoundation
+from compacttab.models.compacttab import CompactTabClassifier, CompactTabRegressor
 
 logger = logging.getLogger(__name__)
 
 
 class TabArenaCompactTabModel(AbstractModel):
-    """Production AutoGluon model wrapper for CompactTab / CompactTabFoundation.
+    """Production AutoGluon model wrapper for CompactTab.
 
-    Designed for direct integration into the autogluon/tabarena benchmark harness.
+    Designed for direct integration into AutoGluon Tabular and the TabArena benchmark.
+    Uses Quantile Piecewise-Linear Embeddings with BatchEnsemble multi-head ensembling.
     """
+
+    ag_key = "COMPACTTAB"
+    ag_name = "CompactTab"
+    ag_priority = 50
 
     def __init__(
         self,
         name: str | None = "CompactTab",
         problem_type: str | None = None,
-        target: str | None = None,
-        foundation_size: str = "small",
-        num_estimators: int = 4,
+        preset: str = "small",
+        max_epochs: int = 50,
+        batch_size: int = 128,
+        learning_rate: float = 1e-3,
+        weight_decay: float = 1e-4,
+        patience: int = 10,
         device: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         if not AUTOGLUON_AVAILABLE:
             raise ImportError(
@@ -54,12 +62,14 @@ class TabArenaCompactTabModel(AbstractModel):
                 "Install via 'pip install autogluon.core'."
             )
         super().__init__(name=name, problem_type=problem_type, **kwargs)
-        self.target = target
-        self.foundation_size = foundation_size
-        self.num_estimators = num_estimators
+        self.preset = preset
+        self.max_epochs = max_epochs
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.patience = patience
         self.device = device
-        self._compacttab_model: CompactTabFoundation | None = None
-        self._schema: DatasetSchema | None = None
+        self._estimator: CompactTabClassifier | CompactTabRegressor | None = None
 
     def _get_default_auxiliary_params(self) -> dict:
         default_aux = super()._get_default_auxiliary_params()
@@ -75,57 +85,73 @@ class TabArenaCompactTabModel(AbstractModel):
         self,
         X: pd.DataFrame,
         y: pd.Series,
+        X_val: pd.DataFrame | None = None,
+        y_val: pd.Series | None = None,
+        time_limit: float | None = None,
         num_cpus: int | None = None,
         num_gpus: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
-        """Fit model on training split using in-context SCM tabular foundation representation."""
-        if self.problem_type == BINARY:
-            task_type = TaskType.BINARY
-        elif self.problem_type == MULTICLASS:
-            task_type = TaskType.MULTICLASS
+        """Fit CompactTab neural network using training split and optional validation split."""
+        params = self._get_model_params()
+        preset = params.get("preset", self.preset)
+        max_epochs = params.get("max_epochs", self.max_epochs)
+        batch_size = params.get("batch_size", self.batch_size)
+        learning_rate = params.get("learning_rate", self.learning_rate)
+        weight_decay = params.get("weight_decay", self.weight_decay)
+        patience = params.get("patience", self.patience)
+
+        device = self.device
+        if device is None and num_gpus is not None:
+            device = "cuda" if num_gpus > 0 else "cpu"
+
+        if self.problem_type in (BINARY, MULTICLASS):
+            self._estimator = CompactTabClassifier(
+                preset=preset,
+                max_epochs=max_epochs,
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                weight_decay=weight_decay,
+                patience=patience,
+                device=device,
+            )
         elif self.problem_type == REGRESSION:
-            task_type = TaskType.REGRESSION
+            self._estimator = CompactTabRegressor(
+                preset=preset,
+                max_epochs=max_epochs,
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                weight_decay=weight_decay,
+                patience=patience,
+                device=device,
+            )
         else:
             raise ValueError(f"Unsupported problem_type: {self.problem_type}")
 
-        num_cols = list(X.select_dtypes(include=["number"]).columns)
-        cat_cols = list(X.select_dtypes(exclude=["number"]).columns)
+        self._estimator.fit(X=X, y=y, X_val=X_val, y_val=y_val)
 
-        self._schema = DatasetSchema(
-            task_type=task_type,
-            target_col=self.target or "target",
-            numerical_cols=num_cols,
-            categorical_cols=cat_cols,
-        )
-
-        self._compacttab_model = CompactTabFoundation(
-            schema=self._schema,
-            size=self.foundation_size,
-            device=self.device,
-            num_estimators=self.num_estimators,
-        )
-
-        self._compacttab_model.fit(X, y)
-
-    def _predict_proba(self, X: pd.DataFrame, **kwargs) -> np.ndarray:
-        """Generate predictions: class probabilities for classification, point predictions for regression."""
-        if self._compacttab_model is None:
+    def _predict_proba(self, X: pd.DataFrame, **kwargs: Any) -> np.ndarray:
+        """Generate prediction probabilities for classification."""
+        if self._estimator is None:
             raise RuntimeError("Model has not been fitted.")
         if self.problem_type == REGRESSION:
-            return self._compacttab_model.predict(X)
-        return self._compacttab_model.predict_proba(X)
+            return self._predict(X, **kwargs)
+        return self._estimator.predict_proba(X)
 
-    def _predict(self, X: pd.DataFrame, **kwargs) -> np.ndarray:
-        """Generate predictions for classification or regression tasks."""
-        if self._compacttab_model is None:
+    def _predict(self, X: pd.DataFrame, **kwargs: Any) -> np.ndarray:
+        """Generate point predictions for classification or regression tasks."""
+        if self._estimator is None:
             raise RuntimeError("Model has not been fitted.")
-        return self._compacttab_model.predict(X)
+        return self._estimator.predict(X)
 
     def _set_default_params(self):
         default_params = {
-            "foundation_size": "small",
-            "num_estimators": 4,
+            "preset": "small",
+            "max_epochs": 50,
+            "batch_size": 128,
+            "learning_rate": 1e-3,
+            "weight_decay": 1e-4,
+            "patience": 10,
         }
         for param, val in default_params.items():
             self._set_default_param_value(param, val)

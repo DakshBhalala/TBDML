@@ -1,9 +1,13 @@
 """Models subpackage for CompactTab."""
 
 from compacttab.models.baselines_nn import TabularMLP, TabularResNet
-from compacttab.models.compacttab import CompactTab, CompactTabConfig
+from compacttab.models.compacttab import (
+    CompactTab,
+    CompactTabClassifier,
+    CompactTabConfig,
+    CompactTabRegressor,
+)
 from compacttab.models.embeddings import CategoricalEmbedding, PiecewiseLinearEncoding
-from compacttab.models.foundation import CompactTabFoundation, CompactTabOmni
 from compacttab.models.layers import BatchEnsembleLinear, GatedResidualBlock, RMSNorm
 
 __all__ = [
@@ -14,8 +18,8 @@ __all__ = [
     "GatedResidualBlock",
     "CompactTabConfig",
     "CompactTab",
+    "CompactTabClassifier",
+    "CompactTabRegressor",
     "TabularMLP",
     "TabularResNet",
-    "CompactTabFoundation",
-    "CompactTabOmni",
 ]

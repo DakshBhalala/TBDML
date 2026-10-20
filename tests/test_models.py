@@ -5,7 +5,12 @@ import torch
 
 from compacttab.data.schema import DatasetSchema, TaskType
 from compacttab.models.baselines_nn import TabularMLP, TabularResNet
-from compacttab.models.compacttab import CompactTab, CompactTabConfig
+from compacttab.models.compacttab import (
+    CompactTab,
+    CompactTabClassifier,
+    CompactTabConfig,
+    CompactTabRegressor,
+)
 from compacttab.models.embeddings import CategoricalEmbedding, PiecewiseLinearEncoding
 from compacttab.models.layers import BatchEnsembleLinear, GatedResidualBlock
 
@@ -114,3 +119,31 @@ def test_tabular_mlp_and_resnet():
     resnet.eval()
     out_resnet = resnet(num_vals, num_masks, cat_indices)
     assert out_resnet.shape == (batch_size, 1)
+
+
+def test_compacttab_classifier_and_regressor():
+    import pandas as pd
+
+    # Classification
+    rng = np.random.default_rng(42)
+    X_cls = pd.DataFrame(rng.normal(size=(50, 4)), columns=[f"num_{i}" for i in range(4)])
+    X_cls["cat_0"] = rng.choice(["A", "B", "C"], size=50)
+    y_cls = pd.Series((X_cls["num_0"] > 0).astype(int))
+
+    clf = CompactTabClassifier(preset="tiny", max_epochs=3, batch_size=32)
+    clf.fit(X_cls, y_cls)
+    preds = clf.predict(X_cls)
+    probs = clf.predict_proba(X_cls)
+
+    assert len(preds) == len(X_cls)
+    assert probs.shape == (len(X_cls), 2)
+    assert np.allclose(probs.sum(axis=1), 1.0, atol=1e-3)
+
+    # Regression
+    y_reg = pd.Series(X_cls["num_0"] * 2.0 + 1.0)
+    reg = CompactTabRegressor(preset="tiny", max_epochs=3, batch_size=32)
+    reg.fit(X_cls, y_reg)
+    preds_reg = reg.predict(X_cls)
+
+    assert len(preds_reg) == len(X_cls)
+    assert not np.isnan(preds_reg).any()

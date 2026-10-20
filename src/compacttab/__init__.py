@@ -3,7 +3,12 @@
 from compacttab.data.preprocessor import TabularPreprocessor
 from compacttab.data.schema import DatasetSchema, TaskType
 from compacttab.evaluation.runner import BenchmarkRunner
-from compacttab.models.compacttab import CompactTab, CompactTabConfig
+from compacttab.models.compacttab import (
+    CompactTab,
+    CompactTabClassifier,
+    CompactTabConfig,
+    CompactTabRegressor,
+)
 from compacttab.training.trainer import TabularTrainer
 
 __version__ = "0.1.0"
@@ -11,6 +16,8 @@ __version__ = "0.1.0"
 __all__ = [
     "CompactTab",
     "CompactTabConfig",
+    "CompactTabClassifier",
+    "CompactTabRegressor",
     "DatasetSchema",
     "TaskType",
     "TabularPreprocessor",
