@@ -1,0 +1,11 @@
+dataset,task_type,model,params,disk_size_kb,fit_time_sec,latency_ms_per_sample,throughput_samples_per_sec,peak_ram_mb,peak_vram_mb,mse,rmse,mae,r2
+Diabetes,regression,Dummy,0,0.0,0.001,0.001,1050156.7,1143.4,16.2,5497.0471,74.1421,64.1262,-0.0063
+Diabetes,regression,RandomForest,34962,0.0,0.597,1.5735,635.5,1152.2,16.2,3117.299,55.8328,44.621,0.4294
+Diabetes,regression,HistGradientBoosting,0,0.0,0.383,0.1024,9764.1,1151.9,16.2,3338.4334,57.7792,45.9541,0.3889
+Diabetes,regression,LightGBM,0,0.0,0.416,0.0592,16901.1,1152.1,16.2,3381.9738,58.1547,45.6706,0.3809
+Diabetes,regression,XGBoost,0,0.0,0.878,0.0278,35936.1,1152.0,16.2,3658.4243,60.4849,48.3826,0.3303
+Diabetes,regression,CatBoost,0,0.0,0.593,0.063,15885.2,1152.1,16.2,2894.8686,53.804,42.5735,0.4701
+Diabetes,regression,TabularMLP,18561,77.4,2.077,0.1257,7952.7,1152.2,17.8,3070.3104,55.4104,42.7346,0.438
+Diabetes,regression,TabularResNet,102401,411.3,3.215,0.2375,4210.0,1152.5,19.7,3400.0767,58.3102,43.5811,0.3776
+Diabetes,regression,CompactTab-Tiny,64657,266.9,3.915,0.6201,1612.6,1152.1,23.0,3264.6108,57.1368,43.7336,0.4024
+Diabetes,regression,CompactTab-Small,467745,1847.5,5.65,0.5922,1688.6,1152.2,66.2,3271.8115,57.1998,46.7113,0.4011
