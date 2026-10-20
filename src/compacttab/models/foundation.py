@@ -75,12 +75,12 @@ class CompactTabFoundation:
         X: Union[pd.DataFrame, np.ndarray],
         y: Optional[Union[pd.Series, np.ndarray]] = None,
     ) -> Tuple[TableTensor, Optional[TableTensor]]:
-        """Convert input data to SDM TableTensor with properly typed stypes."""
+        """Convert input data to SDM TableTensor with properly typed stypes and reset index."""
         if isinstance(X, np.ndarray):
             col_names = self.schema.feature_names
             df_x = pd.DataFrame(X, columns=col_names)
         else:
-            df_x = X.copy()
+            df_x = X.copy().reset_index(drop=True)
 
         # Build stypes dictionary
         stypes: Dict[str, Stype] = {}
@@ -93,8 +93,14 @@ class CompactTabFoundation:
 
         if y is not None:
             target_col = self.schema.target_col or "target"
-            df_x[target_col] = y
-            stypes[target_col] = Stype.categorical if self.schema.is_classification else Stype.numerical
+            if self.schema.is_classification:
+                if self.classes_ is None:
+                    self.classes_ = np.sort(np.unique(np.asarray(y)))
+                df_x[target_col] = pd.Categorical(np.asarray(y), categories=self.classes_)
+                stypes[target_col] = Stype.categorical
+            else:
+                df_x[target_col] = np.asarray(y, dtype=np.float32)
+                stypes[target_col] = Stype.numerical
 
         table = TableTensor.from_pandas(df_x, stypes=stypes, device=self.device)
 
@@ -108,9 +114,9 @@ class CompactTabFoundation:
 
     def fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> "CompactTabFoundation":
         """Store context set for in-context learning."""
-        self.x_context, self.y_context = self._prepare_table(X, y)
         if self.schema.is_classification:
-            self.classes_ = np.unique(np.asarray(y))
+            self.classes_ = np.sort(np.unique(np.asarray(y)))
+        self.x_context, self.y_context = self._prepare_table(X, y)
         return self
 
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
@@ -133,17 +139,26 @@ class CompactTabFoundation:
         probs_tensor = probs_table.numerical
         probs = probs_tensor.cpu().detach().float().numpy()
 
+        # Align columns to match sorted self.classes_ order using output column metadata
+        if (
+            self.classes_ is not None
+            and hasattr(probs_table, "columns")
+            and Stype.numerical in probs_table.columns
+        ):
+            out_cols = probs_table.columns[Stype.numerical]
+            class_to_col = {}
+            for idx, name in enumerate(out_cols):
+                for c in self.classes_:
+                    if str(c) == str(name):
+                        class_to_col[c] = idx
+                        break
+            if len(class_to_col) == len(self.classes_):
+                col_order = [class_to_col[c] for c in self.classes_]
+                probs = probs[:, col_order]
+
         # If binary classification and returned >2 columns
         if self.schema.task_type == TaskType.BINARY and probs.shape[1] > 2:
             probs = probs[:, :2]
-
-        # Align columns to sorted unique classes:
-        if self.classes_ is not None and len(self.classes_) == probs.shape[1]:
-            if self.y_context is not None and hasattr(self.y_context, "categorical") and hasattr(self.y_context.categorical, "categories"):
-                cats = self.y_context.categorical.categories[0].cpu().numpy()
-                sorted_classes = np.sort(cats)
-                order = [int(np.where(cats == c)[0][0]) for c in sorted_classes]
-                probs = probs[:, order]
 
         # Normalize across class dimension
         row_sums = probs.sum(axis=-1, keepdims=True)

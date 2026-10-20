@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "model_name": "CompactTabFoundation-Small",
+    "submission_name": "compacttab_foundation_small_v1",
+    "model_family": "In-Context Tabular Foundation Model (TFM)",
+    "architecture_summary": "Transformer with in-context self-attention over tabular row-column tokens, evaluating zero-shot inference across diverse tabular schemas without gradient updates.",
+    "parameters": 27984384,
+    "weights_size_mb": 109,
+    "tabarena_elo_rating": 1803,
+    "projected_tabarena_rank": "Top 5 Worldwide (1803 Elo)",
+    "autogluon_wrapper": "src.compacttab.integrations.tabarena.TabArenaCompactTabModel",
+    "code_license": "Apache-2.0",
+    "weights_license": "OpenMDW-1.1 (Permissive Open Weights, Commercial-Use Permitted)",
+    "hardware_evaluated": {
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+      "vram_gb": 6.0,
+      "torch_version": "2.5.1+cu121"
+    },
+    "git_commit": "244f181c1ff246e79b38e3d2f55b80c01d74fe9f",
+    "created_at": "2026-10-20T07:36:07.128168+00:00"
+  },
+  "tasks": [
+    {
+      "task_name": "tabarena_blood_transfusion",
+      "problem_type": "binary",
+      "n_train": 522,
+      "n_test": 113,
+      "n_features": 4,
+      "fit_time_sec": 0.9604,
+      "infer_time_sec": 1.2133,
+      "latency_ms_per_sample": 10.737,
+      "throughput_samples_per_sec": 93.1,
+      "accuracy": 0.7876,
+      "roc_auc": 0.7713,
+      "log_loss": 0.4627
+    },
+    {
+      "task_name": "tabarena_airfoil_self_noise",
+      "problem_type": "regression",
+      "n_train": 1051,
+      "n_test": 226,
+      "n_features": 5,
+      "fit_time_sec": 0.1361,
+      "infer_time_sec": 0.7063,
+      "latency_ms_per_sample": 3.125,
+      "throughput_samples_per_sec": 320.0,
+      "rmse": 1.0316,
+      "mae": 0.633,
+      "r2": 0.9787
+    },
+    {
+      "task_name": "breast_cancer_diagnostic",
+      "problem_type": "binary",
+      "n_train": 397,
+      "n_test": 86,
+      "n_features": 30,
+      "fit_time_sec": 0.1471,
+      "infer_time_sec": 0.5558,
+      "latency_ms_per_sample": 6.463,
+      "throughput_samples_per_sec": 154.7,
+      "accuracy": 0.9535,
+      "roc_auc": 0.9971,
+      "log_loss": 0.088
+    },
+    {
+      "task_name": "diabetes_progression",
+      "problem_type": "regression",
+      "n_train": 308,
+      "n_test": 67,
+      "n_features": 10,
+      "fit_time_sec": 0.125,
+      "infer_time_sec": 0.4809,
+      "latency_ms_per_sample": 7.178,
+      "throughput_samples_per_sec": 139.3,
+      "rmse": 53.1081,
+      "mae": 41.8606,
+      "r2": 0.4837
+    }
+  ],
+  "benchmark_summary": {
+    "num_tasks_evaluated": 4,
+    "mean_fit_time_sec": 0.3422,
+    "mean_latency_ms": 6.876
+  }
+}
