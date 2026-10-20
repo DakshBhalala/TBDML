@@ -9,6 +9,10 @@ from compacttab.models.compacttab import (
     CompactTabConfig,
     CompactTabRegressor,
 )
+from compacttab.models.hybrid import (
+    CompactTabHybridClassifier,
+    CompactTabHybridRegressor,
+)
 from compacttab.training.trainer import TabularTrainer
 
 __version__ = "0.1.0"
@@ -18,6 +22,8 @@ __all__ = [
     "CompactTabConfig",
     "CompactTabClassifier",
     "CompactTabRegressor",
+    "CompactTabHybridClassifier",
+    "CompactTabHybridRegressor",
     "DatasetSchema",
     "TaskType",
     "TabularPreprocessor",

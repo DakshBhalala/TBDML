@@ -27,6 +27,7 @@ class TabularTrainer:
         max_epochs: int = 50,
         patience: int = 10,
         batch_size: int = 128,
+        mixup_alpha: float = 0.0,
         verbose: bool = False,
     ):
         self.model = model
@@ -36,6 +37,7 @@ class TabularTrainer:
         self.max_epochs = max_epochs
         self.patience = patience
         self.batch_size = batch_size
+        self.mixup_alpha = mixup_alpha
         self.verbose = verbose
 
         # Automatic device assignment
@@ -117,8 +119,25 @@ class TabularTrainer:
                 targets = targets.to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(num_vals, num_masks, cat_indices)
-                loss = self._compute_loss(outputs, targets)
+                if self.mixup_alpha > 0.0 and num_vals.size(0) > 1:
+                    lam = float(np.random.beta(self.mixup_alpha, self.mixup_alpha))
+                    perm = torch.randperm(num_vals.size(0), device=self.device)
+                    num_vals_in = lam * num_vals + (1.0 - lam) * num_vals[perm]
+                    num_masks_in = torch.maximum(num_masks, num_masks[perm])
+                    if cat_indices.numel() > 0:
+                        cat_select = (torch.rand(cat_indices.shape, device=self.device) < lam).long()
+                        cat_indices_in = cat_select * cat_indices + (1 - cat_select) * cat_indices[perm]
+                    else:
+                        cat_indices_in = cat_indices
+
+                    outputs = self.model(num_vals_in, num_masks_in, cat_indices_in)
+                    loss = lam * self._compute_loss(outputs, targets) + (1.0 - lam) * self._compute_loss(
+                        outputs, targets[perm]
+                    )
+                else:
+                    outputs = self.model(num_vals, num_masks, cat_indices)
+                    loss = self._compute_loss(outputs, targets)
+
                 loss.backward()
 
                 # Gradient clipping for stability

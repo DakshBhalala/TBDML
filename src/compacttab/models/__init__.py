@@ -8,6 +8,10 @@ from compacttab.models.compacttab import (
     CompactTabRegressor,
 )
 from compacttab.models.embeddings import CategoricalEmbedding, PiecewiseLinearEncoding
+from compacttab.models.hybrid import (
+    CompactTabHybridClassifier,
+    CompactTabHybridRegressor,
+)
 from compacttab.models.layers import BatchEnsembleLinear, GatedResidualBlock, RMSNorm
 
 __all__ = [
@@ -20,6 +24,8 @@ __all__ = [
     "CompactTab",
     "CompactTabClassifier",
     "CompactTabRegressor",
+    "CompactTabHybridClassifier",
+    "CompactTabHybridRegressor",
     "TabularMLP",
     "TabularResNet",
 ]

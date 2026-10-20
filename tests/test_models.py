@@ -12,6 +12,10 @@ from compacttab.models.compacttab import (
     CompactTabRegressor,
 )
 from compacttab.models.embeddings import CategoricalEmbedding, PiecewiseLinearEncoding
+from compacttab.models.hybrid import (
+    CompactTabHybridClassifier,
+    CompactTabHybridRegressor,
+)
 from compacttab.models.layers import BatchEnsembleLinear, GatedResidualBlock
 
 
@@ -147,3 +151,31 @@ def test_compacttab_classifier_and_regressor():
 
     assert len(preds_reg) == len(X_cls)
     assert not np.isnan(preds_reg).any()
+
+
+def test_compacttab_hybrid_classifier_and_regressor():
+    import pandas as pd
+
+    rng = np.random.default_rng(42)
+    X = pd.DataFrame(rng.normal(size=(60, 4)), columns=[f"feat_{i}" for i in range(4)])
+    y_cls = pd.Series((X["feat_0"] > 0).astype(int))
+
+    # Test Hybrid Classifier with 2-fold CV for fast test execution
+    hybrid_clf = CompactTabHybridClassifier(preset="tiny", cv_folds=2, max_epochs=2, batch_size=32)
+    hybrid_clf.fit(X, y_cls)
+    probs = hybrid_clf.predict_proba(X)
+    preds = hybrid_clf.predict(X)
+
+    assert probs.shape == (len(X), 2)
+    assert len(preds) == len(X)
+    assert 0.0 <= hybrid_clf.blend_weight_ <= 1.0
+
+    # Test Hybrid Regressor
+    y_reg = pd.Series(X["feat_0"] * 2.0 + X["feat_1"])
+    hybrid_reg = CompactTabHybridRegressor(preset="tiny", cv_folds=2, max_epochs=2, batch_size=32)
+    hybrid_reg.fit(X, y_reg)
+    preds_reg = hybrid_reg.predict(X)
+
+    assert len(preds_reg) == len(X)
+    assert not np.isnan(preds_reg).any()
+    assert 0.0 <= hybrid_reg.blend_weight_ <= 1.0

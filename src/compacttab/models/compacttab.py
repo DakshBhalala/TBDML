@@ -269,6 +269,7 @@ class BaseCompactTabEstimator(BaseEstimator):
         patience: int = 10,
         batch_size: int = 128,
         val_fraction: float = 0.15,
+        mixup_alpha: float = 0.0,
         device: str | None = None,
         random_state: int | None = 42,
         verbose: bool = False,
@@ -286,6 +287,7 @@ class BaseCompactTabEstimator(BaseEstimator):
         self.patience = patience
         self.batch_size = batch_size
         self.val_fraction = val_fraction
+        self.mixup_alpha = mixup_alpha
         self.device = device
         self.random_state = random_state
         self.verbose = verbose
@@ -393,6 +395,7 @@ class CompactTabClassifier(BaseCompactTabEstimator, ClassifierMixin):
             max_epochs=self.max_epochs,
             patience=self.patience,
             batch_size=self.batch_size,
+            mixup_alpha=self.mixup_alpha,
             verbose=self.verbose,
         )
 
@@ -483,6 +486,7 @@ class CompactTabRegressor(BaseCompactTabEstimator, RegressorMixin):
             max_epochs=self.max_epochs,
             patience=self.patience,
             batch_size=self.batch_size,
+            mixup_alpha=self.mixup_alpha,
             verbose=self.verbose,
         )
 
