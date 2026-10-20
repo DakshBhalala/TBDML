@@ -248,7 +248,7 @@ def build_submission_bundle(
     is_small = foundation_size.lower() == "small"
     param_count = 27_984_384 if is_small else 62_354_432
     elo_rating = 1803 if is_small else 1902
-    leaderboard_rank = "Top 5 Worldwide (1803 Elo)" if is_small else "Top 3 Worldwide (1902 Elo)"
+    leaderboard_rank = "Candidate for Top 5 Placement (1803 Elo Target, Pending Official Verification)" if is_small else "Candidate for Top 3 Placement (1902 Elo Target, Pending Official Verification)"
 
     # Metadata
     metadata = {

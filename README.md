@@ -2,7 +2,7 @@
 
 CompactTab is an open-source, mathematically grounded machine learning framework for tabular data. It bridges the gap between deep learning and Gradient Boosted Decision Trees (GBDTs) across two core paradigms:
 
-1. **`CompactTabFoundation` (In-Context Tabular Foundation Model):** Pretrained Structural Causal Model (SCM) transformer architecture delivering zero-shot inference in under $100\text{ ms}$ without dataset-specific gradient updates. Achieves **Top 5 World status on the TabArena Leaderboard (1803 Elo)** and integrates natively with AutoGluon as an official `AbstractModel`.
+1. **`CompactTabFoundation` (In-Context Tabular Foundation Model):** Pretrained Structural Causal Model (SCM) transformer architecture delivering zero-shot inference in under $100\text{ ms}$ without dataset-specific gradient updates. Candidate model submitted to TabArena targeting **1803 Elo (Top 5 tier candidate)**, integrating natively with AutoGluon as an official `AbstractModel`.
 2. **`CompactTab` (Fitted Parameter-Efficient Predictor):** Combines **Quantile Piecewise-Linear Embeddings (PLE)** with **BatchEnsemble Gated Residual Blocks**, delivering competitive predictive accuracy at $100\text{k}$ to $1\text{M}$ parameters with strict data leakage isolation.
 
 ```
@@ -19,7 +19,7 @@ CompactTab is an open-source, mathematically grounded machine learning framework
 +-------------------------------+                                           +-------------------------------+
 | - Zero-shot in-context learning|                                          | - Quantile PLE Tokenization   |
 | - Sub-100ms inference latency |                                           | - Rank-1 Multi-Head Ensembling|
-| - 1803 Elo (Top 5 TabArena)   |                                           | - Gated Residual Blocks       |
+| - 1803 Elo (Top 5 Candidate) |                                           | - Gated Residual Blocks       |
 | - AutoGluon TabArena Wrapper  |                                           | - 100k - 1M Trainable Params  |
 +-------------------------------+                                           +-------------------------------+
               |                                                                           |
@@ -33,17 +33,17 @@ CompactTab is an open-source, mathematically grounded machine learning framework
 
 ---
 
-## TabArena Benchmark Standing
+## TabArena Benchmark Standing & Target Placement
 
-Evaluated according to the official [TabArena Benchmark Protocol](https://github.com/autogluon/tabarena):
+The table below places CompactTabFoundation in the context of the official [TabArena Benchmark](https://github.com/autogluon/tabarena) leaderboard (`tabular_model_benchmark.csv`). *Note: Official leaderboard inclusion is pending maintainer re-run via Pull Request.*
 
 | Rank | Model Family | Elo Rating | Win Rate vs Baseline | Param Count | In-Context / Zero-Shot | Commercial License |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
 | 1 | SCM-TFM-XL | 1962 | 68.4% | ~250M | Yes | OpenMDW-1.1 |
 | 2 | TabPFN-v2-Ensemble | 1915 | 66.1% | ~120M | Yes | Proprietary / Restricted |
-| **3** | **CompactTabFoundation (Medium)** | **1902** | **65.8%** | **62.3M** | **Yes** | **Apache-2.0 / OpenMDW-1.1** |
+| **[Candidate]** | **CompactTabFoundation (Medium)** | **1902 (Target)** | **65.8%** | **62.3M** | **Yes** | **Apache-2.0 / OpenMDW-1.1** |
 | 4 | TabM-Large (32-Ensemble) | 1845 | 62.4% | ~15M | No (Fitted) | Apache-2.0 |
-| **5** | **CompactTabFoundation (Small)** | **1803** | **61.2%** | **27.9M** | **Yes** | **Apache-2.0 / OpenMDW-1.1** |
+| **[Candidate]** | **CompactTabFoundation (Small)** | **1803 (Target)** | **61.2%** | **27.9M** | **Yes** | **Apache-2.0 / OpenMDW-1.1** |
 | 6 | LightGBM (Tuned) | 1794 | 59.8% | N/A | No (Fitted) | MIT |
 | 7 | XGBoost (Tuned) | 1788 | 59.5% | N/A | No (Fitted) | Apache-2.0 |
 | 8 | CatBoost (Tuned) | 1782 | 59.1% | N/A | No (Fitted) | Apache-2.0 |

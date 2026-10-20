@@ -3,7 +3,7 @@
 **Project:** CompactTab
 **Submission ID:** `compacttab_foundation_small_v1`
 **Target Leaderboard:** [TabArena (Living Tabular Benchmark)](https://huggingface.co/spaces/TabArena/leaderboard)
-**Leaderboard Target:** **Top 5 Worldwide (1803 Elo)** (1803 Elo)
+**Leaderboard Target:** Candidate for Top 5 Placement (1803 Elo target, pending official maintainer evaluation)
 **Commit:** `244f181c1ff246e79b38e3d2f55b80c01d74fe9f`
 
 ---
@@ -31,7 +31,7 @@
    - **Description:**
      - Parameter Count: 27,984,384
      - License: Apache-2.0 / OpenMDW-1.1
-     - Verified Elo: 1803 (Rank #5)
+     - Benchmark Candidate: 1803 Elo target (pending official re-run)
      - Hardware: NVIDIA GeForce RTX 3050 6GB Laptop GPU
 
 ### Option B: Hugging Face Leaderboard Discussion / Issue

@@ -7,7 +7,7 @@
     "parameters": 27984384,
     "weights_size_mb": 109,
     "tabarena_elo_rating": 1803,
-    "projected_tabarena_rank": "Top 5 Worldwide (1803 Elo)",
+    "projected_tabarena_rank": "Candidate for Top 5 Placement (1803 Elo Target, Pending Official Verification)",
     "autogluon_wrapper": "src.compacttab.integrations.tabarena.TabArenaCompactTabModel",
     "code_license": "Apache-2.0",
     "weights_license": "OpenMDW-1.1 (Permissive Open Weights, Commercial-Use Permitted)",
