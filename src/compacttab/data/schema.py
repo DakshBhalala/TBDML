@@ -1,17 +1,16 @@
 """Data schema definitions for CompactTab."""
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import List, Optional
+from enum import StrEnum
 
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     BINARY = "binary"
     MULTICLASS = "multiclass"
     REGRESSION = "regression"
 
 
-class FeatureType(str, Enum):
+class FeatureType(StrEnum):
     NUMERICAL = "numerical"
     CATEGORICAL = "categorical"
 
@@ -22,9 +21,9 @@ class DatasetSchema:
 
     target_col: str
     task_type: TaskType
-    numerical_cols: List[str] = field(default_factory=list)
-    categorical_cols: List[str] = field(default_factory=list)
-    num_classes: Optional[int] = None
+    numerical_cols: list[str] = field(default_factory=list)
+    categorical_cols: list[str] = field(default_factory=list)
+    num_classes: int | None = None
     target_mean: float = 0.0
     target_std: float = 1.0
 

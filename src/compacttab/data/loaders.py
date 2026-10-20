@@ -1,6 +1,5 @@
 """Standard reproducible benchmark dataset loaders with deterministic train/val/test splits."""
 
-from typing import Tuple
 import numpy as np
 import pandas as pd
 from sklearn.datasets import fetch_california_housing, load_breast_cancer, load_diabetes, load_wine
@@ -17,7 +16,7 @@ def split_data(
     val_size: float = 0.15,
     test_size: float = 0.15,
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]:
     """Deterministically split data into train, val, and test partitions."""
     stratify = y if task_type in (TaskType.BINARY, TaskType.MULTICLASS) else None
 
@@ -47,7 +46,7 @@ def split_data(
 
 def load_california_housing_dataset(
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
     """Load California Housing regression benchmark."""
     data = fetch_california_housing(as_frame=True)
     df = data.data
@@ -66,7 +65,7 @@ def load_california_housing_dataset(
 
 def load_breast_cancer_dataset(
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
     """Load Breast Cancer Wisconsin binary classification benchmark."""
     data = load_breast_cancer(as_frame=True)
     df = data.data
@@ -86,7 +85,7 @@ def load_breast_cancer_dataset(
 
 def load_wine_dataset(
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
     """Load Wine multiclass classification benchmark."""
     data = load_wine(as_frame=True)
     df = data.data
@@ -106,7 +105,7 @@ def load_wine_dataset(
 
 def load_diabetes_dataset(
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
     """Load Diabetes regression benchmark."""
     data = load_diabetes(as_frame=True)
     df = data.data
@@ -130,7 +129,7 @@ def generate_synthetic_tabular_dataset(
     task_type: TaskType = TaskType.BINARY,
     missing_rate: float = 0.05,
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
     """Generate synthetic tabular dataset with mixed features and missingness."""
     rng = np.random.default_rng(random_state)
 

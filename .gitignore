@@ -41,6 +41,9 @@ htmlcov/
 # CatBoost run artifacts
 catboost_info/
 
+# AutoGluon run artifacts
+AutogluonModels/
+
 # Pyre / Mypy / Ruff
 .mypy_cache/
 .ruff_cache/

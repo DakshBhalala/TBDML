@@ -1,6 +1,5 @@
 """Evaluation metrics for tabular classification and regression."""
 
-from typing import Dict, Optional, Union
 import numpy as np
 from sklearn.metrics import (
     accuracy_score,
@@ -17,15 +16,15 @@ from compacttab.data.schema import TaskType
 
 
 def compute_metrics(
-    y_true: Union[np.ndarray, list],
-    y_pred: Union[np.ndarray, list],
-    y_prob: Optional[Union[np.ndarray, list]] = None,
+    y_true: np.ndarray | list,
+    y_pred: np.ndarray | list,
+    y_prob: np.ndarray | list | None = None,
     task_type: TaskType = TaskType.BINARY,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Compute task-specific evaluation metrics."""
     y_true_arr = np.asarray(y_true)
     y_pred_arr = np.asarray(y_pred)
-    metrics: Dict[str, float] = {}
+    metrics: dict[str, float] = {}
 
     if task_type == TaskType.BINARY:
         metrics["accuracy"] = float(accuracy_score(y_true_arr, y_pred_arr))

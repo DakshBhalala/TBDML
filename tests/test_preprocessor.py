@@ -2,19 +2,20 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from compacttab.data.preprocessor import TabularPreprocessor
 from compacttab.data.schema import DatasetSchema, TaskType
 
 
 def test_numerical_and_categorical_preprocessing():
-    df_train = pd.DataFrame({
-        "num_1": [1.0, 2.0, np.nan, 4.0, 5.0, 10.0],
-        "num_2": [10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
-        "cat_1": ["A", "B", "A", "C", np.nan, "B"],
-        "target": [0, 1, 0, 1, 0, 1],
-    })
+    df_train = pd.DataFrame(
+        {
+            "num_1": [1.0, 2.0, np.nan, 4.0, 5.0, 10.0],
+            "num_2": [10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
+            "cat_1": ["A", "B", "A", "C", np.nan, "B"],
+            "target": [0, 1, 0, 1, 0, 1],
+        }
+    )
 
     schema = DatasetSchema(
         target_col="target",
@@ -32,9 +33,7 @@ def test_numerical_and_categorical_preprocessing():
     # OOV should be index 0
     assert preprocessor.cat_vocabs_["cat_1"]["__UNKNOWN__"] == 0
 
-    num_vals, num_masks, cat_indices, y_trans = preprocessor.transform(
-        df_train, df_train["target"]
-    )
+    num_vals, num_masks, cat_indices, y_trans = preprocessor.transform(df_train, df_train["target"])
 
     assert num_vals.shape == (6, 2)
     assert num_masks.shape == (6, 2)
@@ -46,11 +45,13 @@ def test_numerical_and_categorical_preprocessing():
 
 
 def test_unseen_categories_and_missing_values_in_test():
-    df_train = pd.DataFrame({
-        "num_1": [1.0, 2.0, 3.0, 4.0],
-        "cat_1": ["X", "Y", "Z", "X"],
-        "target": [10.0, 20.0, 30.0, 40.0],
-    })
+    df_train = pd.DataFrame(
+        {
+            "num_1": [1.0, 2.0, 3.0, 4.0],
+            "cat_1": ["X", "Y", "Z", "X"],
+            "target": [10.0, 20.0, 30.0, 40.0],
+        }
+    )
 
     schema = DatasetSchema(
         target_col="target",
@@ -62,10 +63,12 @@ def test_unseen_categories_and_missing_values_in_test():
     preprocessor = TabularPreprocessor(schema=schema, num_bins=4)
     preprocessor.fit(df_train, df_train["target"])
 
-    df_test = pd.DataFrame({
-        "num_1": [np.nan, 100.0],
-        "cat_1": ["UNKNOWN_CAT", "Y"],
-    })
+    df_test = pd.DataFrame(
+        {
+            "num_1": [np.nan, 100.0],
+            "cat_1": ["UNKNOWN_CAT", "Y"],
+        }
+    )
 
     num_vals, num_masks, cat_indices, _ = preprocessor.transform(df_test)
 
@@ -100,9 +103,7 @@ def test_regression_target_inverse_transform():
 def test_data_leakage_isolation():
     """Verify that transforming test data does NOT alter training parameters."""
     df_train = pd.DataFrame({"num": [1.0, 2.0, 3.0, 4.0], "target": [0, 1, 0, 1]})
-    schema = DatasetSchema(
-        target_col="target", task_type=TaskType.BINARY, numerical_cols=["num"]
-    )
+    schema = DatasetSchema(target_col="target", task_type=TaskType.BINARY, numerical_cols=["num"])
     preprocessor = TabularPreprocessor(schema=schema, num_bins=4)
     preprocessor.fit(df_train, df_train["target"])
 

@@ -1,7 +1,7 @@
 """Run comprehensive reproducible tabular benchmark suite across classification and regression."""
 
 import os
-import sys
+
 import pandas as pd
 from rich.console import Console
 from rich.table import Table
@@ -52,7 +52,9 @@ def main():
 
     for name, data_tuple in datasets:
         df_tr, df_val, df_te, y_tr, y_val, y_te, schema = data_tuple
-        console.print(f"\n[bold cyan]>>> Running Benchmark: {name} (Task: {schema.task_type.value}, Train N={len(df_tr)}, Test N={len(df_te)}) <<<[/bold cyan]")
+        console.print(
+            f"\n[bold cyan]>>> Running Benchmark: {name} (Task: {schema.task_type.value}, Train N={len(df_tr)}, Test N={len(df_te)}) <<<[/bold cyan]"
+        )
 
         res_df = runner.run_dataset_benchmark(
             dataset_name=name,
@@ -124,11 +126,13 @@ def df_to_markdown_simple(df: pd.DataFrame) -> str:
     headers = [str(c) for c in df.columns]
     rows = [[str(val) for val in row] for row in df.itertuples(index=False)]
     col_widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
-    
+
     header_str = "| " + " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers)) + " |"
     sep_str = "|-" + "-|-".join("-" * col_widths[i] for i in range(len(headers))) + "-|"
-    row_strs = ["| " + " | ".join(r[i].ljust(col_widths[i]) for i in range(len(headers))) + " |" for r in rows]
-    
+    row_strs = [
+        "| " + " | ".join(r[i].ljust(col_widths[i]) for i in range(len(headers))) + " |" for r in rows
+    ]
+
     return "\n".join([header_str, sep_str] + row_strs)
 
 
@@ -136,7 +140,7 @@ def generate_markdown_report(df: pd.DataFrame, report_path: str):
     lines = [
         "# CompactTab Benchmark Results & Comparative Analysis",
         "\n*Generated from reproducible local benchmark runs.*",
-        f"\n**Execution Hardware:** NVIDIA GeForce RTX 3050 Laptop GPU (6GB VRAM) / 16GB RAM / Windows",
+        "\n**Execution Hardware:** NVIDIA GeForce RTX 3050 Laptop GPU (6GB VRAM) / 16GB RAM / Windows",
         "\n---\n",
         "## 1. Executive Summary",
         "\nThis report summarizes the empirical performance of **CompactTab-Tiny** and **CompactTab-Small** compared against standard tree ensembles (RandomForest, HistGradientBoosting, LightGBM, XGBoost, CatBoost) and standard neural architectures (TabularMLP, TabularResNet) across four diverse benchmark datasets covering binary classification, multiclass classification, and regression.\n",
@@ -148,8 +152,13 @@ def generate_markdown_report(df: pd.DataFrame, report_path: str):
         lines.append(f"### {dataset_name} ({task.capitalize()})\n")
 
         cols_to_show = [
-            "model", "params", "fit_time_sec", "latency_ms_per_sample",
-            "throughput_samples_per_sec", "peak_ram_mb", "peak_vram_mb",
+            "model",
+            "params",
+            "fit_time_sec",
+            "latency_ms_per_sample",
+            "throughput_samples_per_sec",
+            "peak_ram_mb",
+            "peak_vram_mb",
         ]
         if task in ("binary", "multiclass"):
             for m in ["roc_auc", "accuracy", "balanced_accuracy", "log_loss"]:
@@ -165,9 +174,15 @@ def generate_markdown_report(df: pd.DataFrame, report_path: str):
         lines.append("\n\n---\n")
 
     lines.append("## 3. Analysis & Key Observations\n")
-    lines.append("- **Parameter Efficiency:** CompactTab-Tiny delivers competitive predictive accuracy with a tiny parameter footprint (~60k - 85k parameters).")
-    lines.append("- **Inference Latency:** Thanks to vectorized BatchEnsemble operations, CompactTab computes ensemble predictions in a single pass with sub-millisecond per-sample latency.")
-    lines.append("- **Competitive Performance:** CompactTab closes the gap with leading GBDTs (CatBoost, LightGBM, XGBoost) and consistently outperforms standard unregularized MLPs and ResNets.")
+    lines.append(
+        "- **Parameter Efficiency:** CompactTab-Tiny delivers competitive predictive accuracy with a tiny parameter footprint (~60k - 85k parameters)."
+    )
+    lines.append(
+        "- **Inference Latency:** Thanks to vectorized BatchEnsemble operations, CompactTab computes ensemble predictions in a single pass with sub-millisecond per-sample latency."
+    )
+    lines.append(
+        "- **Competitive Performance:** CompactTab closes the gap with leading GBDTs (CatBoost, LightGBM, XGBoost) and consistently outperforms standard unregularized MLPs and ResNets."
+    )
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))

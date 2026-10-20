@@ -1,7 +1,6 @@
 """Unit tests for metric calculation across task types."""
 
 import numpy as np
-import pytest
 
 from compacttab.data.schema import TaskType
 from compacttab.evaluation.metrics import compute_metrics
@@ -24,14 +23,16 @@ def test_binary_metrics():
 def test_multiclass_metrics():
     y_true = np.array([0, 1, 2, 0, 1, 2])
     y_pred = np.array([0, 1, 2, 0, 2, 2])
-    y_prob = np.array([
-        [0.8, 0.1, 0.1],
-        [0.1, 0.8, 0.1],
-        [0.1, 0.1, 0.8],
-        [0.7, 0.2, 0.1],
-        [0.2, 0.3, 0.5],
-        [0.1, 0.1, 0.8],
-    ])
+    y_prob = np.array(
+        [
+            [0.8, 0.1, 0.1],
+            [0.1, 0.8, 0.1],
+            [0.1, 0.1, 0.8],
+            [0.7, 0.2, 0.1],
+            [0.2, 0.3, 0.5],
+            [0.1, 0.1, 0.8],
+        ]
+    )
 
     metrics = compute_metrics(y_true, y_pred, y_prob, task_type=TaskType.MULTICLASS)
     assert "accuracy" in metrics

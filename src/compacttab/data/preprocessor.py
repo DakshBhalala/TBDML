@@ -1,11 +1,12 @@
 """Tabular data preprocessor with strict training isolation and quantile binning."""
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
-from compacttab.data.schema import DatasetSchema, FeatureType, TaskType
+from compacttab.data.schema import DatasetSchema
 
 
 class TabularPreprocessor:
@@ -21,11 +22,11 @@ class TabularPreprocessor:
         self.num_bins = num_bins
         self.handle_unknown = handle_unknown
 
-        self.num_medians_: Dict[str, float] = {}
-        self.num_bin_edges_: Dict[str, np.ndarray] = {}
-        self.cat_vocabs_: Dict[str, Dict[Any, int]] = {}
-        self.cat_cardinalities_: Dict[str, int] = {}
-        self.label_encoder_: Optional[LabelEncoder] = None
+        self.num_medians_: dict[str, float] = {}
+        self.num_bin_edges_: dict[str, np.ndarray] = {}
+        self.cat_vocabs_: dict[str, dict[Any, int]] = {}
+        self.cat_cardinalities_: dict[str, int] = {}
+        self.label_encoder_: LabelEncoder | None = None
         self.target_mean_: float = 0.0
         self.target_std_: float = 1.0
         self.is_fitted_: bool = False
@@ -33,7 +34,7 @@ class TabularPreprocessor:
     def fit(
         self,
         df: pd.DataFrame,
-        y: Optional[Union[pd.Series, np.ndarray]] = None,
+        y: pd.Series | np.ndarray | None = None,
     ) -> "TabularPreprocessor":
         """Fit preprocessor strictly on training features and targets."""
         # 1. Process Numerical Features
@@ -95,8 +96,8 @@ class TabularPreprocessor:
     def transform(
         self,
         df: pd.DataFrame,
-        y: Optional[Union[pd.Series, np.ndarray]] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Optional[np.ndarray]]:
+        y: pd.Series | np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None]:
         """Transform dataframe into:
         - num_values: float array (N, num_cols)
         - num_masks: binary missingness mask (N, num_cols)
@@ -130,7 +131,7 @@ class TabularPreprocessor:
                 series = df[col].astype(str).fillna("__MISSING__")
                 vocab = self.cat_vocabs_[col]
                 # Map unseen or missing categories to 0
-                cat_indices[:, i] = series.map(lambda c: vocab.get(c, 0)).to_numpy(dtype=np.int64)
+                cat_indices[:, i] = series.map(lambda c, v=vocab: v.get(c, 0)).to_numpy(dtype=np.int64)
         else:
             cat_indices = np.empty((n_samples, 0), dtype=np.int64)
 

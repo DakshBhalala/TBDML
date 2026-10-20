@@ -1,10 +1,10 @@
 """Unified benchmark runner comparing CompactTab against tree and neural baselines."""
 
-import json
 import os
 import tempfile
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import torch
@@ -12,7 +12,6 @@ import torch
 from compacttab.baselines.tree_models import (
     CatBoostBaseline,
     DummyBaseline,
-    ExtraTreesBaseline,
     HistGradientBoostingBaseline,
     LightGBMBaseline,
     RandomForestBaseline,
@@ -20,7 +19,7 @@ from compacttab.baselines.tree_models import (
 )
 from compacttab.data.dataset import TabularDataset, create_dataloader
 from compacttab.data.preprocessor import TabularPreprocessor
-from compacttab.data.schema import DatasetSchema, TaskType
+from compacttab.data.schema import DatasetSchema
 from compacttab.evaluation.metrics import compute_metrics
 from compacttab.evaluation.tracker import ResourceTracker
 from compacttab.models.baselines_nn import TabularMLP, TabularResNet
@@ -35,7 +34,7 @@ class BenchmarkRunner:
         self,
         output_dir: str = "experiments",
         random_seed: int = 42,
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.output_dir = output_dir
         self.random_seed = random_seed
@@ -52,7 +51,7 @@ class BenchmarkRunner:
         y_val: pd.Series,
         y_test: pd.Series,
         schema: DatasetSchema,
-        model_names: Optional[List[str]] = None,
+        model_names: list[str] | None = None,
         max_epochs: int = 40,
         batch_size: int = 128,
     ) -> pd.DataFrame:
@@ -75,9 +74,7 @@ class BenchmarkRunner:
             ]
 
         # 1. Fit preprocessor strictly on training data
-        preprocessor = TabularPreprocessor(
-            schema=schema, num_bins=16
-        )
+        preprocessor = TabularPreprocessor(schema=schema, num_bins=16)
         preprocessor.fit(df_train, y_train)
 
         # 2. Transform train, val, and test splits
@@ -87,7 +84,7 @@ class BenchmarkRunner:
 
         # Flatten features for tree baselines
         X_tr_tree = np.hstack([num_tr, cat_tr]) if cat_tr.shape[1] > 0 else num_tr
-        X_val_tree = np.hstack([num_val, cat_val]) if cat_val.shape[1] > 0 else num_val
+        np.hstack([num_val, cat_val]) if cat_val.shape[1] > 0 else num_val
         X_te_tree = np.hstack([num_te, cat_te]) if cat_te.shape[1] > 0 else num_te
 
         # PyTorch Datasets
@@ -101,11 +98,11 @@ class BenchmarkRunner:
 
         for m_name in model_names:
             ResourceTracker.reset_vram_peak()
-            ram_start = ResourceTracker.get_peak_ram_mb()
+            ResourceTracker.get_peak_ram_mb()
             fit_start = time.perf_counter()
 
             model_obj: Any = None
-            trainer: Optional[TabularTrainer] = None
+            trainer: TabularTrainer | None = None
             params_count = 0
             model_disk_size_kb = 0.0
 
@@ -118,11 +115,13 @@ class BenchmarkRunner:
                     model_obj.fit(X_tr_tree, y_train.to_numpy())
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: model_obj.predict_proba(X_te_tree)
-                        if schema.is_classification
-                        else model_obj.predict(X_te_tree)
-                    )
+                    def predict_fn():
+                        return (
+                            model_obj.predict_proba(X_te_tree)
+                            if schema.is_classification
+                            else model_obj.predict(X_te_tree)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -140,11 +139,13 @@ class BenchmarkRunner:
                     fit_time = time.perf_counter() - fit_start
                     params_count = model_obj.count_parameters()
 
-                    predict_fn = (
-                        lambda: model_obj.predict_proba(X_te_tree)
-                        if schema.is_classification
-                        else model_obj.predict(X_te_tree)
-                    )
+                    def predict_fn():
+                        return (
+                            model_obj.predict_proba(X_te_tree)
+                            if schema.is_classification
+                            else model_obj.predict(X_te_tree)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -161,11 +162,13 @@ class BenchmarkRunner:
                     model_obj.fit(X_tr_tree, y_train.to_numpy())
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: model_obj.predict_proba(X_te_tree)
-                        if schema.is_classification
-                        else model_obj.predict(X_te_tree)
-                    )
+                    def predict_fn():
+                        return (
+                            model_obj.predict_proba(X_te_tree)
+                            if schema.is_classification
+                            else model_obj.predict(X_te_tree)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -182,11 +185,13 @@ class BenchmarkRunner:
                     model_obj.fit(X_tr_tree, y_train.to_numpy())
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: model_obj.predict_proba(X_te_tree)
-                        if schema.is_classification
-                        else model_obj.predict(X_te_tree)
-                    )
+                    def predict_fn():
+                        return (
+                            model_obj.predict_proba(X_te_tree)
+                            if schema.is_classification
+                            else model_obj.predict(X_te_tree)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -205,11 +210,13 @@ class BenchmarkRunner:
                     model_obj.fit(X_tr_tree, y_tr_xgb)
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: model_obj.predict_proba(X_te_tree)
-                        if schema.is_classification
-                        else model_obj.predict(X_te_tree)
-                    )
+                    def predict_fn():
+                        return (
+                            model_obj.predict_proba(X_te_tree)
+                            if schema.is_classification
+                            else model_obj.predict(X_te_tree)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -227,11 +234,13 @@ class BenchmarkRunner:
                     model_obj.fit(X_tr_tree, y_train.to_numpy())
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: model_obj.predict_proba(X_te_tree)
-                        if schema.is_classification
-                        else model_obj.predict(X_te_tree)
-                    )
+                    def predict_fn():
+                        return (
+                            model_obj.predict_proba(X_te_tree)
+                            if schema.is_classification
+                            else model_obj.predict(X_te_tree)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -263,11 +272,13 @@ class BenchmarkRunner:
                     trainer.fit(train_dataset, val_dataset)
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: trainer.predict_proba(test_loader)
-                        if schema.is_classification
-                        else trainer.predict(test_loader)
-                    )
+                    def predict_fn():
+                        return (
+                            trainer.predict_proba(test_loader)
+                            if schema.is_classification
+                            else trainer.predict(test_loader)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -299,11 +310,13 @@ class BenchmarkRunner:
                     trainer.fit(train_dataset, val_dataset)
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: trainer.predict_proba(test_loader)
-                        if schema.is_classification
-                        else trainer.predict(test_loader)
-                    )
+                    def predict_fn():
+                        return (
+                            trainer.predict_proba(test_loader)
+                            if schema.is_classification
+                            else trainer.predict(test_loader)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -334,18 +347,22 @@ class BenchmarkRunner:
                         model=model_obj,
                         schema=schema,
                         device=self.device,
-                        learning_rate=config.from_preset(preset).learning_rate if hasattr(config, "learning_rate") else 1e-3,
+                        learning_rate=config.from_preset(preset).learning_rate
+                        if hasattr(config, "learning_rate")
+                        else 1e-3,
                         max_epochs=max_epochs,
                         batch_size=batch_size,
                     )
                     trainer.fit(train_dataset, val_dataset)
                     fit_time = time.perf_counter() - fit_start
 
-                    predict_fn = (
-                        lambda: trainer.predict_proba(test_loader)
-                        if schema.is_classification
-                        else trainer.predict(test_loader)
-                    )
+                    def predict_fn():
+                        return (
+                            trainer.predict_proba(test_loader)
+                            if schema.is_classification
+                            else trainer.predict(test_loader)
+                        )
+
                     lat, tp = ResourceTracker.measure_latency_and_throughput(
                         predict_fn, n_samples=len(df_test)
                     )
@@ -377,9 +394,15 @@ class BenchmarkRunner:
                 if schema.is_classification:
                     y_eval_true = y_te_trans
                     if probs is not None:
-                        y_eval_pred = np.argmax(probs, axis=1) if probs.ndim == 2 else (probs > 0.5).astype(int)
+                        y_eval_pred = (
+                            np.argmax(probs, axis=1) if probs.ndim == 2 else (probs > 0.5).astype(int)
+                        )
                     else:
-                        y_eval_pred = preprocessor.label_encoder_.transform(preds) if preprocessor.label_encoder_ is not None else preds
+                        y_eval_pred = (
+                            preprocessor.label_encoder_.transform(preds)
+                            if preprocessor.label_encoder_ is not None
+                            else preds
+                        )
                 else:
                     y_eval_true = y_test.to_numpy()
                     y_eval_pred = preds
@@ -411,12 +434,14 @@ class BenchmarkRunner:
 
             except Exception as e:
                 print(f"Error evaluating model {m_name} on {dataset_name}: {e}")
-                results.append({
-                    "dataset": dataset_name,
-                    "task_type": schema.task_type.value,
-                    "model": m_name,
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "dataset": dataset_name,
+                        "task_type": schema.task_type.value,
+                        "model": m_name,
+                        "error": str(e),
+                    }
+                )
 
         res_df = pd.DataFrame(results)
 

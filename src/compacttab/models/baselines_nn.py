@@ -1,7 +1,5 @@
 """Standard tabular neural network baselines: TabularMLP and TabularResNet."""
 
-from typing import Dict, Optional
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,8 +14,8 @@ class TabularMLP(nn.Module):
     def __init__(
         self,
         schema: DatasetSchema,
-        cat_cardinalities: Dict[str, int],
-        hidden_dims: Optional[list] = None,
+        cat_cardinalities: dict[str, int],
+        hidden_dims: list | None = None,
         embed_dim: int = 16,
         dropout: float = 0.2,
     ):
@@ -95,7 +93,7 @@ class TabularResNet(nn.Module):
     def __init__(
         self,
         schema: DatasetSchema,
-        cat_cardinalities: Dict[str, int],
+        cat_cardinalities: dict[str, int],
         hidden_dim: int = 128,
         num_blocks: int = 3,
         embed_dim: int = 16,
@@ -121,19 +119,21 @@ class TabularResNet(nn.Module):
 
         self.input_layer = nn.Linear(in_dim, hidden_dim)
 
-        self.blocks = nn.ModuleList([
-            nn.Sequential(
-                nn.LayerNorm(hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, hidden_dim),
-                nn.Dropout(dropout),
-                nn.LayerNorm(hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, hidden_dim),
-                nn.Dropout(dropout),
-            )
-            for _ in range(num_blocks)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.LayerNorm(hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.Dropout(dropout),
+                    nn.LayerNorm(hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.Dropout(dropout),
+                )
+                for _ in range(num_blocks)
+            ]
+        )
 
         if self.schema.task_type == TaskType.BINARY:
             out_dim = 1

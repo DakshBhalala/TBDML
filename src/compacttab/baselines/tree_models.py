@@ -1,8 +1,8 @@
 """Baseline tree and non-neural models conforming to unified interface."""
 
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
+
 import numpy as np
-import pandas as pd
 from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.ensemble import (
     ExtraTreesClassifier,
@@ -13,22 +13,25 @@ from sklearn.ensemble import (
     RandomForestRegressor,
 )
 
-from compacttab.data.schema import DatasetSchema, TaskType
+from compacttab.data.schema import DatasetSchema
 
 try:
     import lightgbm as lgb
+
     HAS_LIGHTGBM = True
 except ImportError:
     HAS_LIGHTGBM = False
 
 try:
     import xgboost as xgb
+
     HAS_XGBOOST = True
 except ImportError:
     HAS_XGBOOST = False
 
 try:
     import catboost as cb
+
     HAS_CATBOOST = True
 except ImportError:
     HAS_CATBOOST = False
@@ -87,7 +90,7 @@ class RandomForestBaseline(BaseBaseline):
         self,
         schema: DatasetSchema,
         n_estimators: int = 100,
-        max_depth: Optional[int] = 12,
+        max_depth: int | None = 12,
         random_state: int = 42,
     ):
         super().__init__(schema, name="RandomForest")
@@ -129,7 +132,7 @@ class ExtraTreesBaseline(BaseBaseline):
         self,
         schema: DatasetSchema,
         n_estimators: int = 100,
-        max_depth: Optional[int] = 12,
+        max_depth: int | None = 12,
         random_state: int = 42,
     ):
         super().__init__(schema, name="ExtraTrees")

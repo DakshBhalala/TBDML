@@ -1,6 +1,5 @@
 """PyTorch Dataset and DataLoader abstractions for Tabular data."""
 
-from typing import Optional, Tuple
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -14,7 +13,7 @@ class TabularDataset(Dataset):
         num_vals: np.ndarray,
         num_masks: np.ndarray,
         cat_indices: np.ndarray,
-        targets: Optional[np.ndarray] = None,
+        targets: np.ndarray | None = None,
     ):
         self.num_vals = torch.from_numpy(num_vals).float()
         self.num_masks = torch.from_numpy(num_masks).float()
@@ -24,7 +23,7 @@ class TabularDataset(Dataset):
     def __len__(self) -> int:
         return len(self.num_vals)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]:
         target = self.targets[idx] if self.targets is not None else torch.empty(0)
         return self.num_vals[idx], self.num_masks[idx], self.cat_indices[idx], target
 

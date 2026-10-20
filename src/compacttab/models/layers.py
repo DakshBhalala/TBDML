@@ -1,6 +1,5 @@
 """Neural layers including RMSNorm, BatchEnsembleLinear, and GatedResidualBlock."""
 
-from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,7 +21,7 @@ class RMSNorm(nn.Module):
 
 class BatchEnsembleLinear(nn.Module):
     """Parameter-efficient BatchEnsemble Linear Layer.
-    
+
     Maintains a shared weight matrix W and bias b, modulated by k rank-1
     adapters R (input) and S (output) for an ensemble of k submodels.
     """
@@ -52,15 +51,19 @@ class BatchEnsembleLinear(nn.Module):
         # Rank-1 adapters: initialized with conservative perturbation around 1.0
         # R shape: (k, in_features)
         # S shape: (k, out_features)
-        self.R = nn.Parameter(torch.ones(num_heads, in_features) + torch.randn(num_heads, in_features) * adapter_init_std)
-        self.S = nn.Parameter(torch.ones(num_heads, out_features) + torch.randn(num_heads, out_features) * adapter_init_std)
+        self.R = nn.Parameter(
+            torch.ones(num_heads, in_features) + torch.randn(num_heads, in_features) * adapter_init_std
+        )
+        self.S = nn.Parameter(
+            torch.ones(num_heads, out_features) + torch.randn(num_heads, out_features) * adapter_init_std
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Tensor of shape (batch_size, in_features) or (k, batch_size, in_features)
-            
+
         Returns:
             Output tensor of shape (k, batch_size, out_features)
         """
@@ -106,20 +109,16 @@ class GatedResidualBlock(nn.Module):
 
         self.norm = RMSNorm(hidden_dim)
         # Up-projection outputs 2 * intermediate_dim for SwiGLU gating
-        self.linear_up = BatchEnsembleLinear(
-            hidden_dim, intermediate_dim * 2, num_heads=num_heads
-        )
-        self.linear_down = BatchEnsembleLinear(
-            intermediate_dim, hidden_dim, num_heads=num_heads
-        )
+        self.linear_up = BatchEnsembleLinear(hidden_dim, intermediate_dim * 2, num_heads=num_heads)
+        self.linear_down = BatchEnsembleLinear(intermediate_dim, hidden_dim, num_heads=num_heads)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Tensor of shape (k, batch_size, hidden_dim)
-            
+
         Returns:
             Tensor of shape (k, batch_size, hidden_dim)
         """

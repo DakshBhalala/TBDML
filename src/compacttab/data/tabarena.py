@@ -1,7 +1,7 @@
 """Official TabArena OpenML benchmark integration and dataset loader."""
 
 import os
-from typing import List, Optional, Tuple
+
 import numpy as np
 import openml
 import pandas as pd
@@ -12,7 +12,7 @@ from compacttab.data.schema import DatasetSchema, TaskType
 TABARENA_SUITE_ID = 457
 
 
-def get_tabarena_task_ids() -> List[int]:
+def get_tabarena_task_ids() -> list[int]:
     """Retrieve all official task IDs in the TabArena-v0.1 benchmark suite."""
     suite = openml.study.get_suite(TABARENA_SUITE_ID)
     return list(suite.tasks)
@@ -22,7 +22,7 @@ def load_tabarena_task(
     task_id: int,
     cache_dir: str = "data_cache/tabarena",
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, DatasetSchema]:
     """Load a specific TabArena task and return train/val/test splits with schema."""
     os.makedirs(cache_dir, exist_ok=True)
 
@@ -54,7 +54,7 @@ def load_tabarena_task(
     # Identify numerical and categorical columns
     num_cols = []
     cat_cols = []
-    for col, is_cat in zip(attribute_names, categorical_indicator):
+    for col, is_cat in zip(attribute_names, categorical_indicator, strict=False):
         if is_cat or not pd.api.types.is_numeric_dtype(X[col]):
             cat_cols.append(col)
         else:

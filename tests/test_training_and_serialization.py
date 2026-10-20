@@ -2,13 +2,12 @@
 
 import os
 import tempfile
-import numpy as np
-import pytest
-import torch
 
+import numpy as np
+
+from compacttab.data.dataset import TabularDataset
 from compacttab.data.loaders import generate_synthetic_tabular_dataset
 from compacttab.data.preprocessor import TabularPreprocessor
-from compacttab.data.dataset import TabularDataset
 from compacttab.models.compacttab import CompactTab, CompactTabConfig
 from compacttab.training.trainer import TabularTrainer
 
@@ -55,6 +54,7 @@ def test_compacttab_training_and_checkpoint_reload():
     assert len(trainer.history["val_loss"]) > 0
 
     from compacttab.data.dataset import create_dataloader
+
     test_loader = create_dataloader(test_ds, batch_size=32, shuffle=False)
     preds_before = trainer.predict_proba(test_loader)
     assert preds_before.shape == (len(df_te), 2)

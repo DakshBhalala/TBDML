@@ -1,7 +1,8 @@
 """CompactTab: State-of-the-Art Compact Tabular Deep Learning Architecture."""
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -81,9 +82,9 @@ class CompactTab(nn.Module):
     def __init__(
         self,
         schema: DatasetSchema,
-        bin_edges: Dict[str, np.ndarray],
-        cat_cardinalities: Dict[str, int],
-        config: Optional[CompactTabConfig] = None,
+        bin_edges: dict[str, np.ndarray],
+        cat_cardinalities: dict[str, int],
+        config: CompactTabConfig | None = None,
     ):
         super().__init__()
         self.schema = schema
@@ -107,9 +108,7 @@ class CompactTab(nn.Module):
                 embed_dim=self.config.embed_dim,
             )
             # Missingness mask projection
-            self.mask_proj = nn.Linear(
-                len(self.schema.numerical_cols), self.config.embed_dim, bias=False
-            )
+            self.mask_proj = nn.Linear(len(self.schema.numerical_cols), self.config.embed_dim, bias=False)
         else:
             self.ple = None
             self.mask_proj = None
@@ -141,15 +140,17 @@ class CompactTab(nn.Module):
         self.input_proj = nn.Linear(total_tokens_dim, self.config.hidden_dim)
 
         # 3. Gated Residual Backbone
-        self.blocks = nn.ModuleList([
-            GatedResidualBlock(
-                hidden_dim=self.config.hidden_dim,
-                expansion_factor=self.config.expansion_factor,
-                num_heads=self.config.num_heads,
-                dropout=self.config.dropout,
-            )
-            for _ in range(self.config.num_layers)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                GatedResidualBlock(
+                    hidden_dim=self.config.hidden_dim,
+                    expansion_factor=self.config.expansion_factor,
+                    num_heads=self.config.num_heads,
+                    dropout=self.config.dropout,
+                )
+                for _ in range(self.config.num_layers)
+            ]
+        )
         self.final_norm = RMSNorm(self.config.hidden_dim)
 
         # 4. Multi-head BatchEnsemble Prediction Head
@@ -172,7 +173,7 @@ class CompactTab(nn.Module):
         cat_indices: torch.Tensor,
     ) -> torch.Tensor:
         """Forward pass returning raw logits/outputs for all k ensemble heads.
-        
+
         Returns:
             Tensor of shape (k, batch_size, out_dim)
         """
@@ -217,13 +218,13 @@ class CompactTab(nn.Module):
         return_ensemble: bool = False,
     ) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             num_vals: Continuous features tensor (B, F_num)
             num_masks: Missingness indicators tensor (B, F_num)
             cat_indices: Categorical indices tensor (B, F_cat)
             return_ensemble: If True, returns (k, B, out_dim). If False, returns averaged prediction.
-            
+
         Returns:
             Averaged prediction tensor (B, out_dim) or ensemble heads tensor (k, B, out_dim).
         """

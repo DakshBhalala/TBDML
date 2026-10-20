@@ -1,6 +1,5 @@
 """Embeddings and tokenizers for tabular numerical and categorical features."""
 
-from typing import Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,15 +7,15 @@ import torch.nn as nn
 
 class PiecewiseLinearEncoding(nn.Module):
     """Vectorized Piecewise Linear Encoding (PLE) for continuous features.
-    
+
     Transforms scalar continuous values into soft piecewise linear representations
     relative to quantile bin edges fitted on training data.
     """
 
     def __init__(
         self,
-        bin_edges: Dict[str, np.ndarray],
-        num_cols: List[str],
+        bin_edges: dict[str, np.ndarray],
+        num_cols: list[str],
         embed_dim: int = 16,
     ):
         super().__init__()
@@ -58,10 +57,10 @@ class PiecewiseLinearEncoding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Numerical tensor of shape (batch_size, num_features)
-            
+
         Returns:
             Encoded tensor of shape (batch_size, num_features, embed_dim)
         """
@@ -81,8 +80,8 @@ class CategoricalEmbedding(nn.Module):
 
     def __init__(
         self,
-        cardinalities: Dict[str, int],
-        cat_cols: List[str],
+        cardinalities: dict[str, int],
+        cat_cols: list[str],
         embed_dim: int = 16,
     ):
         super().__init__()
@@ -90,21 +89,23 @@ class CategoricalEmbedding(nn.Module):
         self.embed_dim = embed_dim
         self.num_features = len(cat_cols)
 
-        self.embeddings = nn.ModuleList([
-            nn.Embedding(
-                num_embeddings=max(2, cardinalities[col]),
-                embedding_dim=embed_dim,
-                padding_idx=0,
-            )
-            for col in cat_cols
-        ])
+        self.embeddings = nn.ModuleList(
+            [
+                nn.Embedding(
+                    num_embeddings=max(2, cardinalities[col]),
+                    embedding_dim=embed_dim,
+                    padding_idx=0,
+                )
+                for col in cat_cols
+            ]
+        )
 
     def forward(self, x_cat: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x_cat: Categorical indices tensor of shape (batch_size, num_cat_features)
-            
+
         Returns:
             Embedded tensor of shape (batch_size, num_cat_features, embed_dim)
         """

@@ -1,7 +1,6 @@
 """Unit tests for baseline tree models and wrappers."""
 
 import numpy as np
-import pytest
 
 from compacttab.baselines.tree_models import (
     CatBoostBaseline,

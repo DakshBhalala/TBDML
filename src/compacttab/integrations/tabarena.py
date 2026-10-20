@@ -10,15 +10,14 @@ Complies with official TabArena benchmark submission requirements:
 from __future__ import annotations
 
 import logging
-import os
-from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 try:
-    from autogluon.core.models import AbstractModel
     from autogluon.core.constants import BINARY, MULTICLASS, REGRESSION
+    from autogluon.core.models import AbstractModel
+
     AUTOGLUON_AVAILABLE = True
 except ImportError:
     AbstractModel = object  # type: ignore
@@ -41,12 +40,12 @@ class TabArenaCompactTabModel(AbstractModel):
 
     def __init__(
         self,
-        name: Optional[str] = "CompactTab",
-        problem_type: Optional[str] = None,
-        target: Optional[str] = None,
+        name: str | None = "CompactTab",
+        problem_type: str | None = None,
+        target: str | None = None,
         foundation_size: str = "small",
         num_estimators: int = 4,
-        device: Optional[str] = None,
+        device: str | None = None,
         **kwargs,
     ):
         if not AUTOGLUON_AVAILABLE:
@@ -59,23 +58,25 @@ class TabArenaCompactTabModel(AbstractModel):
         self.foundation_size = foundation_size
         self.num_estimators = num_estimators
         self.device = device
-        self._compacttab_model: Optional[CompactTabFoundation] = None
-        self._schema: Optional[DatasetSchema] = None
+        self._compacttab_model: CompactTabFoundation | None = None
+        self._schema: DatasetSchema | None = None
 
     def _get_default_auxiliary_params(self) -> dict:
         default_aux = super()._get_default_auxiliary_params()
-        default_aux.update({
-            "valid_raw_types": ["int", "float", "category", "object"],
-            "ignored_type_group_raw": [],
-        })
+        default_aux.update(
+            {
+                "valid_raw_types": ["int", "float", "category", "object"],
+                "ignored_type_group_raw": [],
+            }
+        )
         return default_aux
 
     def _fit(
         self,
         X: pd.DataFrame,
         y: pd.Series,
-        num_cpus: Optional[int] = None,
-        num_gpus: Optional[int] = None,
+        num_cpus: int | None = None,
+        num_gpus: int | None = None,
         **kwargs,
     ) -> None:
         """Fit model on training split using in-context SCM tabular foundation representation."""

@@ -8,11 +8,13 @@ version = "0.1.0"
 description = "CompactTab: State-of-the-Art Parameter-Efficient Tabular Deep Learning Architecture and Benchmark Suite"
 readme = "README.md"
 authors = [
+    { name = "Daksh Bhalala", email = "bhalaladaksh613@gmail.com" },
     { name = "CompactTab Research Team" }
 ]
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-keywords = ["machine-learning", "tabular-data", "deep-learning", "batch-ensemble", "benchmark", "compact-ml"]
+keywords = ["machine-learning", "tabular-data", "deep-learning", "foundation-models", "batch-ensemble", "benchmark", "autogluon", "tabarena"]
+
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -37,6 +39,12 @@ dependencies = [
     "pydantic>=2.6.0",
     "psutil>=5.9.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/DakshBhalala/TBDML"
+Repository = "https://github.com/DakshBhalala/TBDML"
+"TabArena Pull Request" = "https://github.com/autogluon/tabarena/pull/676"
+"Bug Tracker" = "https://github.com/DakshBhalala/TBDML/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -69,4 +77,4 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-ignore = ["E501"]
+ignore = ["B023", "E501"]

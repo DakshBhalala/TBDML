@@ -2,7 +2,9 @@
 
 import os
 import time
-from typing import Any, Callable, Dict, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
+
 import psutil
 import torch
 
@@ -35,7 +37,7 @@ class ResourceTracker:
         n_samples: int,
         warmup_runs: int = 2,
         benchmark_runs: int = 5,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Measure inference latency (ms/sample) and throughput (samples/sec)."""
         # Warmup
         for _ in range(warmup_runs):

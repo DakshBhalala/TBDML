@@ -1,7 +1,7 @@
 """Run official TabArena (Suite 457) benchmark evaluation comparing CompactTab against baselines."""
 
 import os
-import openml
+
 import pandas as pd
 from rich.console import Console
 from rich.table import Table
@@ -19,7 +19,9 @@ def df_to_markdown_table(df: pd.DataFrame) -> str:
     col_widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
     header_str = "| " + " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers)) + " |"
     sep_str = "|-" + "-|-".join("-" * col_widths[i] for i in range(len(headers))) + "-|"
-    row_strs = ["| " + " | ".join(r[i].ljust(col_widths[i]) for i in range(len(headers))) + " |" for r in rows]
+    row_strs = [
+        "| " + " | ".join(r[i].ljust(col_widths[i]) for i in range(len(headers))) + " |" for r in rows
+    ]
     return "\n".join([header_str, sep_str] + row_strs)
 
 
@@ -60,8 +62,12 @@ def main():
     for task_id, task_label in tabarena_tasks:
         console.print(f"\n[bold cyan]>>> Fetching TabArena Task {task_id}: {task_label} <<<[/bold cyan]")
         try:
-            X_tr, X_val, X_te, y_tr, y_val, y_te, schema = load_tabarena_task(task_id=task_id, random_state=42)
-            console.print(f"Task type: {schema.task_type.value} | Train N: {len(X_tr)} | Test N: {len(X_te)} | Num: {len(schema.numerical_cols)} | Cat: {len(schema.categorical_cols)}")
+            X_tr, X_val, X_te, y_tr, y_val, y_te, schema = load_tabarena_task(
+                task_id=task_id, random_state=42
+            )
+            console.print(
+                f"Task type: {schema.task_type.value} | Train N: {len(X_tr)} | Test N: {len(X_te)} | Num: {len(schema.numerical_cols)} | Cat: {len(schema.categorical_cols)}"
+            )
 
             res_df = runner.run_dataset_benchmark(
                 dataset_name=f"TabArena_{task_label}",
@@ -125,7 +131,7 @@ def main():
         tabarena_report = "reports/tabarena_report.md"
         with open(tabarena_report, "w", encoding="utf-8") as f:
             f.write("# Official TabArena (Suite 457) Benchmark Report\n\n")
-            f.write(f"**Hardware:** NVIDIA GeForce RTX 3050 Laptop GPU (6GB VRAM) / 16GB RAM\n\n")
+            f.write("**Hardware:** NVIDIA GeForce RTX 3050 Laptop GPU (6GB VRAM) / 16GB RAM\n\n")
             for dataset_name, group in master_df.groupby("dataset"):
                 task = group["task_type"].iloc[0]
                 f.write(f"## {dataset_name} ({task.capitalize()})\n\n")

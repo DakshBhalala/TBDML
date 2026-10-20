@@ -1,7 +1,6 @@
 """Unit tests for TabArena AutoGluon integration."""
 
 import numpy as np
-import pandas as pd
 import pytest
 from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.model_selection import train_test_split
@@ -50,7 +49,7 @@ def test_tabarena_autogluon_regression():
 
     df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
     X_train, y_train = df_train[feature_cols], df_train[target_col]
-    X_test, y_test = df_test[feature_cols], df_test[target_col]
+    X_test, _y_test = df_test[feature_cols], df_test[target_col]
 
     model = TabArenaCompactTabModel(
         problem_type="regression",

@@ -6,14 +6,12 @@ with scikit-learn compatible APIs, FP16 inference, and CompactTab BatchEnsemble 
 
 from __future__ import annotations
 
-import copy
 import logging
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 
 # Monkey-patch torch.cuda.get_per_process_memory_fraction for PyTorch <= 2.5
 if torch.cuda.is_available() and not hasattr(torch.cuda, "get_per_process_memory_fraction"):
@@ -23,6 +21,7 @@ try:
     import sdm
     import sdm.models
     from sdm import Stype, TableTensor
+
     SDM_AVAILABLE = True
 except ImportError:
     SDM_AVAILABLE = False
@@ -43,7 +42,7 @@ class CompactTabFoundation:
         self,
         schema: DatasetSchema,
         size: Literal["small", "medium", "large"] = "small",
-        device: Optional[str] = None,
+        device: str | None = None,
         num_estimators: int = 4,
     ):
         if not SDM_AVAILABLE:
@@ -66,15 +65,15 @@ class CompactTabFoundation:
             device=self.device,
         )
 
-        self.x_context: Optional[TableTensor] = None
-        self.y_context: Optional[TableTensor] = None
-        self.classes_: Optional[np.ndarray] = None
+        self.x_context: TableTensor | None = None
+        self.y_context: TableTensor | None = None
+        self.classes_: np.ndarray | None = None
 
     def _prepare_table(
         self,
-        X: Union[pd.DataFrame, np.ndarray],
-        y: Optional[Union[pd.Series, np.ndarray]] = None,
-    ) -> Tuple[TableTensor, Optional[TableTensor]]:
+        X: pd.DataFrame | np.ndarray,
+        y: pd.Series | np.ndarray | None = None,
+    ) -> tuple[TableTensor, TableTensor | None]:
         """Convert input data to SDM TableTensor with properly typed stypes and reset index."""
         if isinstance(X, np.ndarray):
             col_names = self.schema.feature_names
@@ -83,7 +82,7 @@ class CompactTabFoundation:
             df_x = X.copy().reset_index(drop=True)
 
         # Build stypes dictionary
-        stypes: Dict[str, Stype] = {}
+        stypes: dict[str, Stype] = {}
         for col in self.schema.numerical_cols:
             if col in df_x.columns:
                 stypes[col] = Stype.numerical
@@ -112,14 +111,14 @@ class CompactTabFoundation:
 
         return table, None
 
-    def fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> "CompactTabFoundation":
+    def fit(self, X: pd.DataFrame | np.ndarray, y: pd.Series | np.ndarray) -> CompactTabFoundation:
         """Store context set for in-context learning."""
         if self.schema.is_classification:
             self.classes_ = np.sort(np.unique(np.asarray(y)))
         self.x_context, self.y_context = self._prepare_table(X, y)
         return self
 
-    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict_proba(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         """In-context classification probability prediction."""
         if not self.schema.is_classification:
             raise ValueError("predict_proba is only available for classification tasks.")
@@ -165,7 +164,7 @@ class CompactTabFoundation:
         probs = np.where(row_sums > 0, probs / np.maximum(row_sums, 1e-12), 1.0 / probs.shape[1])
         return probs
 
-    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         """Predict labels for classification or expected values for regression."""
         if self.schema.is_classification:
             probs = self.predict_proba(X)
@@ -208,23 +207,23 @@ class CompactTabOmni:
         schema: DatasetSchema,
         foundation_size: Literal["small", "medium"] = "small",
         foundation_weight: float = 0.65,
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.schema = schema
         self.foundation_weight = foundation_weight
         self.foundation = CompactTabFoundation(schema, size=foundation_size, device=device)
-        self.classes_: Optional[np.ndarray] = None
+        self.classes_: np.ndarray | None = None
 
-    def fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> "CompactTabOmni":
+    def fit(self, X: pd.DataFrame | np.ndarray, y: pd.Series | np.ndarray) -> CompactTabOmni:
         self.foundation.fit(X, y)
         if self.schema.is_classification:
             self.classes_ = np.unique(np.asarray(y))
         return self
 
-    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict_proba(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         return self.foundation.predict_proba(X)
 
-    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         return self.foundation.predict(X)
 
     def count_parameters(self) -> int:

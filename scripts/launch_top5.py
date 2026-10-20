@@ -1,10 +1,8 @@
 """Launch script for Top 5 Tabular Foundation Model (CompactTabFoundation)."""
 
 import argparse
-import sys
 import time
-import numpy as np
-import pandas as pd
+
 import torch
 from rich.console import Console
 from rich.table import Table
@@ -19,7 +17,9 @@ console = Console()
 
 
 def run_classification_demo(size: str = "small"):
-    console.print(f"\n[bold green]>>> Launching Top 5 Model (size='{size}') on Classification <<<[/bold green]")
+    console.print(
+        f"\n[bold green]>>> Launching Top 5 Model (size='{size}') on Classification <<<[/bold green]"
+    )
     data = load_breast_cancer(as_frame=True)
     df = data.frame
     target_col = "target"
@@ -58,7 +58,10 @@ def run_classification_demo(size: str = "small"):
     t = Table(title=f"Classification Results (size='{size}')", show_header=True, header_style="bold magenta")
     t.add_column("Metric", style="cyan")
     t.add_column("Score / Value", style="bold green")
-    t.add_row("Leaderboard Elo Rating", "1803 (Candidate for Top 5)" if size == "small" else "1902 (Candidate for Top 3)")
+    t.add_row(
+        "Leaderboard Elo Rating",
+        "1803 (Candidate for Top 5)" if size == "small" else "1902 (Candidate for Top 3)",
+    )
     t.add_row("ROC-AUC", f"{auc:.4f}")
     t.add_row("Accuracy", f"{acc * 100:.2f}%")
     t.add_row("Fit Time", f"{fit_time:.3f} s")
@@ -106,7 +109,10 @@ def run_regression_demo(size: str = "small"):
     t = Table(title=f"Regression Results (size='{size}')", show_header=True, header_style="bold magenta")
     t.add_column("Metric", style="cyan")
     t.add_column("Score / Value", style="bold green")
-    t.add_row("Leaderboard Elo Rating", "2109 (Candidate for Regression Top 5)" if size == "small" else "2237 (Candidate for Top 3)")
+    t.add_row(
+        "Leaderboard Elo Rating",
+        "2109 (Candidate for Regression Top 5)" if size == "small" else "2237 (Candidate for Top 3)",
+    )
     t.add_row("R2 Score", f"{r2:.4f}")
     t.add_row("RMSE", f"{rmse:.4f}")
     t.add_row("Fit Time", f"{fit_time:.3f} s")
@@ -116,8 +122,15 @@ def run_regression_demo(size: str = "small"):
 
 def main():
     parser = argparse.ArgumentParser(description="Launch Top 5 Tabular Foundation Model")
-    parser.add_argument("--size", choices=["small", "medium"], default="small", help="Model size ('small' = Top 5, 'medium' = Top 3)")
-    parser.add_argument("--task", choices=["classification", "regression", "both"], default="both", help="Task type")
+    parser.add_argument(
+        "--size",
+        choices=["small", "medium"],
+        default="small",
+        help="Model size ('small' = Top 5, 'medium' = Top 3)",
+    )
+    parser.add_argument(
+        "--task", choices=["classification", "regression", "both"], default="both", help="Task type"
+    )
     args = parser.parse_args()
 
     console.print("[bold yellow]=====================================================[/bold yellow]")

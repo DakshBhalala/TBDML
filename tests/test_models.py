@@ -1,14 +1,13 @@
 """Unit tests for CompactTab architecture, layers, and parameter counts."""
 
 import numpy as np
-import pytest
 import torch
 
 from compacttab.data.schema import DatasetSchema, TaskType
 from compacttab.models.baselines_nn import TabularMLP, TabularResNet
 from compacttab.models.compacttab import CompactTab, CompactTabConfig
 from compacttab.models.embeddings import CategoricalEmbedding, PiecewiseLinearEncoding
-from compacttab.models.layers import BatchEnsembleLinear, GatedResidualBlock, RMSNorm
+from compacttab.models.layers import BatchEnsembleLinear, GatedResidualBlock
 
 
 def test_piecewise_linear_encoding():

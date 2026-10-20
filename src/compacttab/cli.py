@@ -2,25 +2,21 @@
 
 import os
 import sys
-from typing import Optional
-import numpy as np
+
 import pandas as pd
 import psutil
+import torch
+import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-import torch
-import typer
 
 from compacttab.data.loaders import (
-    generate_synthetic_tabular_dataset,
     load_breast_cancer_dataset,
     load_california_housing_dataset,
     load_diabetes_dataset,
     load_wine_dataset,
 )
-from compacttab.data.preprocessor import TabularPreprocessor
-from compacttab.data.schema import DatasetSchema, TaskType
 
 app = typer.Typer(
     name="compacttab",
@@ -91,10 +87,12 @@ def smoke_benchmark(
         ("CaliforniaHousing", load_california_housing_dataset()),
     ]
     if not fast:
-        tasks.extend([
-            ("Wine", load_wine_dataset()),
-            ("Diabetes", load_diabetes_dataset()),
-        ])
+        tasks.extend(
+            [
+                ("Wine", load_wine_dataset()),
+                ("Diabetes", load_diabetes_dataset()),
+            ]
+        )
 
     models_to_test = [
         "Dummy",
@@ -199,11 +197,13 @@ def df_to_markdown_table(df: pd.DataFrame) -> str:
     headers = [str(c) for c in df.columns]
     rows = [[str(val) for val in row] for row in df.itertuples(index=False)]
     col_widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
-    
+
     header_str = "| " + " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers)) + " |"
     sep_str = "|-" + "-|-".join("-" * col_widths[i] for i in range(len(headers))) + "-|"
-    row_strs = ["| " + " | ".join(r[i].ljust(col_widths[i]) for i in range(len(headers))) + " |" for r in rows]
-    
+    row_strs = [
+        "| " + " | ".join(r[i].ljust(col_widths[i]) for i in range(len(headers))) + " |" for r in rows
+    ]
+
     return "\n".join([header_str, sep_str] + row_strs)
 
 

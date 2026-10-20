@@ -1,75 +1,75 @@
-# Official TabArena Leaderboard Submission Guide
+# Official TabArena Leaderboard Submission & Lifecycle Guide
 
-*Leaderboard:* [TabArena Leaderboard (Hugging Face Space)](https://huggingface.co/spaces/TabArena/leaderboard)  
-*Repository:* [autogluon/tabarena (GitHub)](https://github.com/autogluon/tabarena)  
-*Website:* [tabarena.ai](https://tabarena.ai)
-
----
-
-## Overview
-
-TabArena is the official living benchmark for tabular machine learning and Tabular Foundation Models (TFMs). The leaderboard tracks Elo ratings across diverse OpenML suites (Classification, Regression, Balanced, Imbalanced, Small, Medium).
-
-To get **CompactTab** or **CompactTabFoundation** officially listed on the public leaderboard, follow these three steps.
+*Active Pull Request:* **[autogluon/tabarena#676](https://github.com/autogluon/tabarena/pull/676)**  
+*Fork Repository:* [`DakshBhalala/tabarena`](https://github.com/DakshBhalala/tabarena) (branch `feature/add-compacttab-model`)  
+*Living Leaderboard:* [TabArena Leaderboard (Hugging Face Space)](https://huggingface.co/spaces/TabArena/leaderboard)  
+*Upstream Repository:* [autogluon/tabarena (GitHub)](https://github.com/autogluon/tabarena)  
 
 ---
 
-## Step 1: Make Your Model Repository Public
+## 1. Submission Overview
 
-TabArena rules require submitted models to be publicly accessible and open source:
-1. Create a repository on GitHub (e.g. `github.com/<your-username>/compacttab`).
-2. Push this repository (`git remote add origin ... && git push -u origin main`).
-3. Ensure permissive licensing (Apache-2.0 / OpenMDW-1.1), which is already configured.
+TabArena is the living benchmark and leaderboard for tabular machine learning and Tabular Foundation Models (TFMs). Methods submitted to TabArena are evaluated using a strict, standardized 5-stage protocol on identical benchmark hardware (SkyPilot cluster) across 51 OpenML datasets.
+
+CompactTabFoundation has completed **Stage 1** with the opening of **[Pull Request #676](https://github.com/autogluon/tabarena/pull/676)**.
 
 ---
 
-## Step 2: Implement AutoGluon `AbstractModel` Wrapper
+## 2. Integrated Files in TabArena
 
-TabArena benchmarks models by instantiating them via AutoGluon's `AbstractModel` interface:
+The integration is implemented under `packages/tabarena/src/tabarena/models/compacttab/`:
 
-```python
-from autogluon.core.models import AbstractModel
-import pandas as pd
-from compacttab.data.schema import DatasetSchema, TaskType
-from compacttab.models import CompactTabFoundation
+```
+packages/tabarena/src/tabarena/models/compacttab/
+├── __init__.py           # Re-exports CompactTabFoundationModel & Medium
+├── model.py              # AbstractModel implementation with FP16 autocast
+├── hpo.py                # ConfigGenerator and HPO search spaces
+├── info.py               # Method metadata, license, and pip_extra
+└── tests/
+    ├── __init__.py
+    └── test_model.py     # Isolated model unit tests (3/3 passing)
+```
 
-class TabArenaCompactTabModel(AbstractModel):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.model = None
+### Shared Configuration Updates:
+- **`packages/tabarena/pyproject.toml`**: Added `compacttab` extra with pinned `structured-data-models` Git commit and added `"tabarena[compacttab]"` to `extended`.
+- **`packages/tabarena/src/tabarena/models/__init__.py`**: Added lazy loader mappings for `CompactTabFoundationModel` and `CompactTabFoundationMediumModel`.
+- **`packages/tabarena/src/tabarena/website/website_format.py`**: Added `COMPACTTAB` and `TA-COMPACTTAB` to `Constants.foundational`.
 
-    def _fit(self, X: pd.DataFrame, y: pd.Series, **kwargs):
-        task_type = TaskType.BINARY if self.problem_type == "binary" else (
-            TaskType.MULTICLASS if self.problem_type == "multiclass" else TaskType.REGRESSION
-        )
-        schema = DatasetSchema(
-            task_type=task_type,
-            target_col=self.target,
-            numerical_cols=list(X.select_dtypes(include=["number"]).columns),
-            categorical_cols=list(X.select_dtypes(exclude=["number"]).columns),
-        )
-        self.model = CompactTabFoundation(schema=schema, size="small", device="cuda")
-        self.model.fit(X, y)
-        return self
+---
 
-    def _predict_proba(self, X: pd.DataFrame, **kwargs):
-        return self.model.predict_proba(X)
+## 3. The 5-Stage Evaluation Lifecycle
 
-    def _predict(self, X: pd.DataFrame, **kwargs):
-        return self.model.predict(X)
+```
+Stage 1: Pull Request (#676)
+  └── Author submits model wrapper, unit tests, and hardware verification. [COMPLETE]
+
+Stage 2: Benchmark Cluster Execution
+  └── TabArena maintainers queue the method on the SkyPilot GPU cluster across all 51 datasets and folds.
+
+Stage 3: Verification & Sign-off
+  └── Maintainers post raw and summarized metrics in PR #676; @DakshBhalala confirms results.
+
+Stage 4: Artifact Hosting & Merge
+  └── Predictions hosted in TabArena Cloudflare R2 bucket; PR #676 merged into main.
+
+Stage 5: Leaderboard Release
+  └── Official leaderboard website updates with verified Elo score and ranking.
 ```
 
 ---
 
-## Step 3: Run Official Benchmark & Submit Pull Request
+## 4. Verification Commands
 
-1. Fork and clone `github.com/autogluon/tabarena`.
-2. Register your model in `tabarena/models/`.
-3. Run the evaluation script:
-   ```bash
-   python -m tabarena.run_benchmark --model compacttab --suite tabarena-v0.1
-   ```
-4. Commit the generated predictions dataset and evaluation JSON to your fork.
-5. Open a Pull Request to `autogluon/tabarena` titled:
-   `[Model] Add CompactTab / CompactTabFoundation SOTA Tabular Model`
-6. Once merged by the maintainers, the Hugging Face Space automatically recalculates Elo scores and lists your model in the **Top 5**!
+To locally reproduce the model tests and verify registry discovery:
+
+```bash
+# Run compacttab isolated unit tests
+pytest packages/tabarena/src/tabarena/models/compacttab/tests/test_model.py
+
+# Verify code formatting and linting
+ruff check packages/tabarena/src/tabarena/models/compacttab/
+ruff format --check packages/tabarena/src/tabarena/models/compacttab/
+
+# Verify TabArena model discovery
+python -c "from tabarena.models._registry import discover_models; print('Discovered:', 'CompactTabFoundation' in discover_models())"
+```

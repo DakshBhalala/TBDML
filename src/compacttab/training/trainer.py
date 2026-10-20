@@ -2,7 +2,8 @@
 
 import copy
 import os
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -20,7 +21,7 @@ class TabularTrainer:
         self,
         model: nn.Module,
         schema: DatasetSchema,
-        device: Optional[str] = None,
+        device: str | None = None,
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-4,
         max_epochs: int = 50,
@@ -58,13 +59,11 @@ class TabularTrainer:
             lr=self.learning_rate,
             weight_decay=self.weight_decay,
         )
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-            self.optimizer, T_max=max_epochs, eta_min=1e-6
-        )
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=max_epochs, eta_min=1e-6)
 
         self.best_val_loss = float("inf")
-        self.best_state_dict: Optional[Dict[str, Any]] = None
-        self.history: Dict[str, List[float]] = {"train_loss": [], "val_loss": []}
+        self.best_state_dict: dict[str, Any] | None = None
+        self.history: dict[str, list[float]] = {"train_loss": [], "val_loss": []}
 
     def _compute_loss(self, outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """Compute loss supporting both multi-head ensemble tensors and single-head tensors."""
@@ -94,12 +93,10 @@ class TabularTrainer:
     def fit(
         self,
         train_dataset: TabularDataset,
-        val_dataset: Optional[TabularDataset] = None,
+        val_dataset: TabularDataset | None = None,
     ) -> "TabularTrainer":
         """Execute full training loop with early stopping."""
-        train_loader = create_dataloader(
-            train_dataset, batch_size=self.batch_size, shuffle=True
-        )
+        train_loader = create_dataloader(train_dataset, batch_size=self.batch_size, shuffle=True)
         val_loader = (
             create_dataloader(val_dataset, batch_size=self.batch_size, shuffle=False)
             if val_dataset is not None

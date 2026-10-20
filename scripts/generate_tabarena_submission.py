@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -55,7 +54,7 @@ def evaluate_task(
     problem_type: str,
     foundation_size: str = "small",
     device: str = "cuda",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Train TabArenaCompactTabModel on train split and evaluate on test split."""
     model = TabArenaCompactTabModel(
         name=f"CompactTabFoundation-{foundation_size.capitalize()}",
@@ -76,7 +75,7 @@ def evaluate_task(
     n_samples = len(df_test)
     latency_ms = (infer_time / max(1, n_samples)) * 1000.0
 
-    metrics: Dict[str, Any] = {
+    metrics: dict[str, Any] = {
         "task_name": task_name,
         "problem_type": problem_type,
         "n_train": len(df_train),
@@ -107,7 +106,11 @@ def evaluate_task(
         try:
             if problem_type == "binary":
                 # Ensure 0/1 target for roc_auc_score
-                if classes_ is not None and len(classes_) == 2 and not np.issubdtype(y_test_arr.dtype, np.number):
+                if (
+                    classes_ is not None
+                    and len(classes_) == 2
+                    and not np.issubdtype(y_test_arr.dtype, np.number)
+                ):
                     pos_label = classes_[1]
                     y_binary = (y_test_arr == pos_label).astype(int)
                 else:
@@ -119,11 +122,11 @@ def evaluate_task(
                 ll = log_loss(y_test_arr, probs, labels=classes_)
             metrics["roc_auc"] = round(float(auc), 4)
             metrics["log_loss"] = round(float(ll), 4)
-        except Exception as e:
+        except Exception:
             metrics["roc_auc"] = None
             metrics["log_loss"] = None
 
-        for idx, (yt, yp, prob) in enumerate(zip(y_test_arr, preds, probs)):
+        for idx, (yt, yp, prob) in enumerate(zip(y_test_arr, preds, probs, strict=False)):
             rec = {
                 "task_name": task_name,
                 "problem_type": problem_type,
@@ -147,16 +150,18 @@ def evaluate_task(
         metrics["mae"] = round(float(mae), 4)
         metrics["r2"] = round(float(r2), 4)
 
-        for idx, (yt, yp) in enumerate(zip(y_test_arr, preds)):
-            pred_records.append({
-                "task_name": task_name,
-                "problem_type": problem_type,
-                "sample_idx": idx,
-                "y_true": str(yt),
-                "y_pred": str(yp),
-                "prob_0": None,
-                "prob_1": None,
-            })
+        for idx, (yt, yp) in enumerate(zip(y_test_arr, preds, strict=False)):
+            pred_records.append(
+                {
+                    "task_name": task_name,
+                    "problem_type": problem_type,
+                    "sample_idx": idx,
+                    "y_true": str(yt),
+                    "y_pred": str(yp),
+                    "prob_0": None,
+                    "prob_1": None,
+                }
+            )
 
     return {"metrics": metrics, "predictions": pred_records}
 
@@ -171,11 +176,11 @@ def build_submission_bundle(
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    console.print(f"[bold cyan]=======================================================[/bold cyan]")
-    console.print(f"[bold cyan]   Generating TabArena Official Submission Bundle     [/bold cyan]")
+    console.print("[bold cyan]=======================================================[/bold cyan]")
+    console.print("[bold cyan]   Generating TabArena Official Submission Bundle     [/bold cyan]")
     console.print(f"[bold cyan]   Model: CompactTabFoundation ({foundation_size.upper()})[/bold cyan]")
     console.print(f"[bold cyan]   Device: {device.upper()} | Output: {output_dir}     [/bold cyan]")
-    console.print(f"[bold cyan]=======================================================[/bold cyan]\n")
+    console.print("[bold cyan]=======================================================[/bold cyan]\n")
 
     all_metrics = []
     all_predictions = []
@@ -204,7 +209,9 @@ def build_submission_bundle(
                 all_metrics.append(res["metrics"])
                 all_predictions.extend(res["predictions"])
             except Exception as e:
-                console.print(f"[yellow]Failed OpenML task {task_id}: {e}. Falling back to local tasks.[/yellow]")
+                console.print(
+                    f"[yellow]Failed OpenML task {task_id}: {e}. Falling back to local tasks.[/yellow]"
+                )
 
     # 2. Local benchmark verification tasks
     console.print("[cyan]Evaluating benchmark verification tasks...[/cyan]")
@@ -248,7 +255,11 @@ def build_submission_bundle(
     is_small = foundation_size.lower() == "small"
     param_count = 27_984_384 if is_small else 62_354_432
     elo_rating = 1803 if is_small else 1902
-    leaderboard_rank = "Candidate for Top 5 Placement (1803 Elo Target, Pending Official Verification)" if is_small else "Candidate for Top 3 Placement (1902 Elo Target, Pending Official Verification)"
+    leaderboard_rank = (
+        "Candidate for Top 5 Placement (1803 Elo Target, Pending Official Verification)"
+        if is_small
+        else "Candidate for Top 3 Placement (1902 Elo Target, Pending Official Verification)"
+    )
 
     # Metadata
     metadata = {
@@ -272,7 +283,7 @@ def build_submission_bundle(
             "torch_version": torch.__version__,
         },
         "git_commit": get_git_commit(),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     metadata_path = out_path / "metadata.json"
@@ -298,9 +309,9 @@ def build_submission_bundle(
     # Standalone model submission file for TabArena repo
     standalone_code = (
         '"""TabArena integration model definition for CompactTabFoundation.\n\n'
-        'Drop this file into autogluon/tabarena/tabarena/models/compacttab.py\n'
+        "Drop this file into autogluon/tabarena/tabarena/models/compacttab.py\n"
         '"""\n\n'
-        'from compacttab.integrations.tabarena import TabArenaCompactTabModel\n\n'
+        "from compacttab.integrations.tabarena import TabArenaCompactTabModel\n\n"
         '__all__ = ["TabArenaCompactTabModel"]\n'
     )
     with open(out_path / "model_submission.py", "w", encoding="utf-8") as f:
@@ -310,10 +321,10 @@ def build_submission_bundle(
     checklist_md = f"""# TabArena Official Submission Bundle: CompactTabFoundation ({foundation_size.capitalize()})
 
 **Project:** CompactTab
-**Submission ID:** `{metadata['submission_name']}`
+**Submission ID:** `{metadata["submission_name"]}`
 **Target Leaderboard:** [TabArena (Living Tabular Benchmark)](https://huggingface.co/spaces/TabArena/leaderboard)
 **Leaderboard Target:** **{leaderboard_rank}** ({elo_rating} Elo)
-**Commit:** `{metadata['git_commit']}`
+**Commit:** `{metadata["git_commit"]}`
 
 ---
 
@@ -341,7 +352,7 @@ def build_submission_bundle(
      - Parameter Count: {param_count:,}
      - License: Apache-2.0 / OpenMDW-1.1
      - Verified Elo: {elo_rating} (Rank #{5 if is_small else 3})
-     - Hardware: {metadata['hardware_evaluated']['gpu']}
+     - Hardware: {metadata["hardware_evaluated"]["gpu"]}
 
 ### Option B: Hugging Face Leaderboard Discussion / Issue
 1. Navigate to [TabArena Leaderboard Discussions](https://huggingface.co/spaces/TabArena/leaderboard/discussions).
@@ -382,8 +393,12 @@ def build_submission_bundle(
 
 def main():
     parser = argparse.ArgumentParser(description="Generate TabArena submission bundle.")
-    parser.add_argument("--size", choices=["small", "medium"], default="small", help="Foundation model size preset")
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu", help="Compute device")
+    parser.add_argument(
+        "--size", choices=["small", "medium"], default="small", help="Foundation model size preset"
+    )
+    parser.add_argument(
+        "--device", default="cuda" if torch.cuda.is_available() else "cpu", help="Compute device"
+    )
     parser.add_argument("--output-dir", default="submission/compacttab_tabarena_v1", help="Output directory")
     parser.add_argument("--skip-openml", action="store_true", help="Skip fetching OpenML tasks")
     args = parser.parse_args()
