@@ -50,10 +50,16 @@ class TabularPreprocessor:
             # Calculate quantile bin edges
             quantiles = np.linspace(0.0, 1.0, self.num_bins + 1)
             edges = np.quantile(clean_vals, quantiles)
-            # Ensure strictly increasing edges to avoid division by zero
             edges = np.unique(edges)
-            if len(edges) < 2:
-                edges = np.array([median_val - 1.0, median_val + 1.0], dtype=np.float32)
+            if len(edges) < self.num_bins + 1:
+                min_v = float(np.min(clean_vals))
+                max_v = float(np.max(clean_vals))
+                if np.isclose(min_v, max_v):
+                    min_v -= 1.0
+                    max_v += 1.0
+                edges = np.linspace(min_v, max_v, self.num_bins + 1, dtype=np.float32)
+            elif len(edges) > self.num_bins + 1:
+                edges = edges[: self.num_bins + 1]
             self.num_bin_edges_[col] = edges.astype(np.float32)
 
         # 2. Process Categorical Features

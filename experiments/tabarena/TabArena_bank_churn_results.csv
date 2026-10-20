@@ -1,0 +1,11 @@
+dataset,task_type,model,params,disk_size_kb,fit_time_sec,latency_ms_per_sample,throughput_samples_per_sec,peak_ram_mb,peak_vram_mb,accuracy,balanced_accuracy,f1,roc_auc,log_loss
+TabArena_bank_churn,binary,Dummy,0,0.0,0.003,0.0,33392698.1,1309.9,16.2,0.796,0.5,0.0,0.5,0.5059
+TabArena_bank_churn,binary,RandomForest,100214,0.0,0.229,0.0705,14188.0,1329.0,16.2,0.8727,0.7268,0.6062,0.8656,0.3325
+TabArena_bank_churn,binary,HistGradientBoosting,0,0.0,1.436,0.0098,102102.6,1329.1,16.2,0.8713,0.7357,0.6163,0.875,0.325
+TabArena_bank_churn,binary,LightGBM,0,0.0,1.156,0.008,125356.6,1329.3,16.2,0.8767,0.7463,0.6351,0.8782,0.322
+TabArena_bank_churn,binary,XGBoost,0,0.0,0.339,0.0023,433025.4,1329.1,16.2,0.8787,0.7379,0.627,0.8771,0.3209
+TabArena_bank_churn,binary,CatBoost,0,0.0,0.852,0.0027,364713.3,1329.2,16.2,0.874,0.7252,0.6054,0.8752,0.3291
+TabArena_bank_churn,binary,TabularMLP,26449,109.4,23.969,0.0837,11953.2,1328.0,18.0,0.796,0.5,0.0,0.5747,0.5028
+TabArena_bank_churn,binary,TabularResNet,110289,443.4,36.996,0.1242,8048.8,1327.8,19.9,0.796,0.5,0.0,0.5704,0.5049
+TabArena_bank_churn,binary,CompactTab-Tiny,64297,264.1,79.591,0.0305,32796.8,1327.8,23.0,0.872,0.7337,0.6145,0.8733,0.3301
+TabArena_bank_churn,binary,CompactTab-Small,467025,1842.9,13.41,0.0417,23958.4,1328.8,66.2,0.8587,0.6645,0.4928,0.8514,0.3575

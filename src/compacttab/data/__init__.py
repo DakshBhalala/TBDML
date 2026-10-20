@@ -11,6 +11,7 @@ from compacttab.data.loaders import (
 )
 from compacttab.data.preprocessor import TabularPreprocessor
 from compacttab.data.schema import DatasetSchema, FeatureType, TaskType
+from compacttab.data.tabarena import get_tabarena_task_ids, load_tabarena_task
 
 __all__ = [
     "DatasetSchema",
@@ -25,4 +26,6 @@ __all__ = [
     "load_wine_dataset",
     "load_diabetes_dataset",
     "generate_synthetic_tabular_dataset",
+    "get_tabarena_task_ids",
+    "load_tabarena_task",
 ]

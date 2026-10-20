@@ -24,32 +24,37 @@ class PiecewiseLinearEncoding(nn.Module):
         self.embed_dim = embed_dim
         self.num_features = len(num_cols)
 
-        # Register bin edges buffers
-        edge_tensors = []
-        num_bins_list = []
-        for col in num_cols:
-            edges = torch.from_numpy(bin_edges[col]).float()
-            edge_tensors.append(edges)
-            num_bins_list.append(len(edges) - 1)
+        if self.num_features > 0:
+            edge_tensors = [torch.from_numpy(bin_edges[col]).float() for col in num_cols]
+            max_edges = max(len(e) for e in edge_tensors)
+            num_bins = max(1, max_edges - 1)
+            self.num_bins = num_bins
 
-        self.num_bins_list = num_bins_list
-        # Pad edge tensors to identical length for vectorized operations
-        max_edges = max(len(e) for e in edge_tensors) if edge_tensors else 2
-        padded_edges = torch.zeros(self.num_features, max_edges)
-        edge_masks = torch.zeros(self.num_features, max_edges, dtype=torch.bool)
+            b_left_all = []
+            b_right_all = []
+            for e in edge_tensors:
+                if len(e) < max_edges:
+                    pad_e = torch.linspace(e[0], e[-1], max_edges)
+                else:
+                    pad_e = e[:max_edges]
+                b_left_all.append(pad_e[:-1])
+                b_right_all.append(pad_e[1:])
 
-        for i, edges in enumerate(edge_tensors):
-            padded_edges[i, : len(edges)] = edges
-            edge_masks[i, : len(edges)] = True
+            b_left = torch.stack(b_left_all, dim=0).unsqueeze(0)  # (1, F, num_bins)
+            b_right = torch.stack(b_right_all, dim=0).unsqueeze(0)  # (1, F, num_bins)
+            span = torch.clamp(b_right - b_left, min=1e-6)
 
-        self.register_buffer("padded_edges", padded_edges)  # (F, max_edges)
-        self.register_buffer("edge_masks", edge_masks)
+            self.register_buffer("b_left", b_left)
+            self.register_buffer("span", span)
 
-        # Trainable projection from PLE bins to embedding dimension
-        self.projections = nn.ModuleList([
-            nn.Linear(num_bins_list[i], embed_dim, bias=False)
-            for i in range(self.num_features)
-        ])
+            # Single 3D tensor parameter for all feature projections: (F, num_bins, embed_dim)
+            self.weight = nn.Parameter(torch.empty(self.num_features, num_bins, embed_dim))
+            nn.init.kaiming_uniform_(self.weight, a=5**0.5)
+        else:
+            self.num_bins = 0
+            self.register_buffer("b_left", torch.empty(0))
+            self.register_buffer("span", torch.empty(0))
+            self.weight = nn.Parameter(torch.empty(0, 0, embed_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
@@ -63,23 +68,12 @@ class PiecewiseLinearEncoding(nn.Module):
         if self.num_features == 0:
             return torch.empty(x.shape[0], 0, self.embed_dim, device=x.device)
 
-        batch_size = x.shape[0]
-        outputs = []
+        # Vectorized soft binning across all features in a single kernel
+        x_exp = x.unsqueeze(-1)  # (N, F, 1)
+        ple_val = torch.clamp((x_exp - self.b_left) / self.span, 0.0, 1.0)  # (N, F, num_bins)
 
-        for i in range(self.num_features):
-            feat_val = x[:, i : i + 1]  # (B, 1)
-            edges = self.padded_edges[i, self.edge_masks[i]]  # (num_edges,)
-            b_left = edges[:-1]  # (num_bins,)
-            b_right = edges[1:]  # (num_bins,)
-            span = torch.clamp(b_right - b_left, min=1e-6)
-
-            # Piecewise linear formula:
-            # e_j = clamp((x - b_left) / (b_right - b_left), 0, 1)
-            ple_val = torch.clamp((feat_val - b_left) / span, 0.0, 1.0)  # (B, num_bins)
-            proj = self.projections[i](ple_val)  # (B, embed_dim)
-            outputs.append(proj)
-
-        return torch.stack(outputs, dim=1)  # (B, F, embed_dim)
+        # Vectorized einsum projection: (N, F, num_bins) x (F, num_bins, embed_dim) -> (N, F, embed_dim)
+        return torch.einsum("nfk,fkd->nfd", ple_val, self.weight)
 
 
 class CategoricalEmbedding(nn.Module):

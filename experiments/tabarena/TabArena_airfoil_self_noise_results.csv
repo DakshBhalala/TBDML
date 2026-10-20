@@ -1,0 +1,11 @@
+dataset,task_type,model,params,disk_size_kb,fit_time_sec,latency_ms_per_sample,throughput_samples_per_sec,peak_ram_mb,peak_vram_mb,mse,rmse,mae,r2
+TabArena_airfoil_self_noise,regression,Dummy,0,0.0,0.083,0.0005,1898202.6,659.9,0.0,50.3578,7.0963,5.7215,-0.0084
+TabArena_airfoil_self_noise,regression,RandomForest,104080,0.0,0.471,0.653,1531.5,677.2,0.0,4.0087,2.0022,1.4683,0.9197
+TabArena_airfoil_self_noise,regression,HistGradientBoosting,0,0.0,1.777,0.053,18880.8,677.4,0.0,4.8517,2.2027,1.522,0.9028
+TabArena_airfoil_self_noise,regression,LightGBM,0,0.0,0.744,0.0208,48023.8,678.6,0.0,5.6632,2.3797,1.6901,0.8866
+TabArena_airfoil_self_noise,regression,XGBoost,0,0.0,0.252,0.0072,138870.1,681.1,0.0,4.5996,2.1447,1.5369,0.9079
+TabArena_airfoil_self_noise,regression,CatBoost,0,0.0,0.511,0.0164,61133.0,689.3,0.0,7.0207,2.6497,1.9585,0.8594
+TabArena_airfoil_self_noise,regression,TabularMLP,20289,84.5,4.164,0.0172,58215.6,1150.3,17.9,43.1771,6.5709,5.2451,0.1354
+TabArena_airfoil_self_noise,regression,TabularResNet,104129,418.6,6.213,0.1127,8876.2,1151.2,19.8,42.8435,6.5455,5.1828,0.1421
+TabArena_airfoil_self_noise,regression,CompactTab-Tiny,60229,246.9,14.687,0.1417,7056.8,1242.7,22.9,6.3649,2.5229,1.8451,0.8725
+TabArena_airfoil_self_noise,regression,CompactTab-Small,451209,1780.1,21.449,0.2554,3915.0,1245.1,65.8,3.2932,1.8147,1.2739,0.9341

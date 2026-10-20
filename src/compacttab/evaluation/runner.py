@@ -374,9 +374,19 @@ class BenchmarkRunner:
                             os.remove(tmp_path)
 
                 # Compute standard metrics against y_test
+                if schema.is_classification:
+                    y_eval_true = y_te_trans
+                    if probs is not None:
+                        y_eval_pred = np.argmax(probs, axis=1) if probs.ndim == 2 else (probs > 0.5).astype(int)
+                    else:
+                        y_eval_pred = preprocessor.label_encoder_.transform(preds) if preprocessor.label_encoder_ is not None else preds
+                else:
+                    y_eval_true = y_test.to_numpy()
+                    y_eval_pred = preds
+
                 eval_metrics = compute_metrics(
-                    y_true=y_test.to_numpy(),
-                    y_pred=preds,
+                    y_true=y_eval_true,
+                    y_pred=y_eval_pred,
                     y_prob=probs,
                     task_type=schema.task_type,
                 )
