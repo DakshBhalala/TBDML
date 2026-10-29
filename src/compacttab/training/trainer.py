@@ -14,6 +14,20 @@ from compacttab.data.dataset import TabularDataset, create_dataloader
 from compacttab.data.schema import DatasetSchema, TaskType
 
 
+class WarmupCosineDecayLRSchedule:
+    """Picklable learning rate schedule with linear warmup and cosine decay."""
+
+    def __init__(self, warmup_epochs: int, max_epochs: int):
+        self.warmup_epochs = max(1, warmup_epochs)
+        self.max_epochs = max(1, max_epochs)
+
+    def __call__(self, epoch: int) -> float:
+        if epoch < self.warmup_epochs:
+            return float(epoch + 1) / float(self.warmup_epochs)
+        progress = float(epoch - self.warmup_epochs) / float(max(1, self.max_epochs - self.warmup_epochs))
+        return 0.5 * (1.0 + float(np.cos(np.pi * progress)))
+
+
 class TabularTrainer:
     """Production-grade trainer for CompactTab and tabular neural networks."""
 
@@ -65,14 +79,8 @@ class TabularTrainer:
         )
 
         warmup_epochs = min(3, max(1, max_epochs // 10))
-
-        def lr_lambda(epoch: int) -> float:
-            if epoch < warmup_epochs:
-                return float(epoch + 1) / float(max(1, warmup_epochs))
-            progress = float(epoch - warmup_epochs) / float(max(1, max_epochs - warmup_epochs))
-            return 0.5 * (1.0 + float(np.cos(np.pi * progress)))
-
-        self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lr_lambda)
+        schedule = WarmupCosineDecayLRSchedule(warmup_epochs, max_epochs)
+        self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=schedule)
 
         self.best_val_loss = float("inf")
         self.best_state_dict: dict[str, Any] | None = None
